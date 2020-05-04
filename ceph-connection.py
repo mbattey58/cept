@@ -1,6 +1,6 @@
 #https://stackoverflow.com/questions/39596987/how-to-update-metadata-of-an-existing-object-in-aws-s3-using-python-boto3
 #https://boto3.amazonaws.com/v1/documentation/api/latest/reference/services/s3.html#S3.Object.wait_until_exists
-
+#https://github.com/ceph/ceph/tree/master/examples/boto3
 import boto3
 import inspect
 import json
@@ -51,4 +51,18 @@ if __name__ == "__main__":
 
     print("s3 waiters:")
     print(client.waiter_names)
+    n = s3.BucketNotification("uv-bucket-1")
+    print(dir(n))
+    print(n)
+    # response = n.put(
+    #     NotificationConfiguration={'LambdaFunctionConfigurations': [
+    #         {
+    #             'TopicArn': 'arn:http://123.12',#aws:lambda:us-east-1:033333333:function:mylambda:staging',
+    #             'Events': [
+    #                 's3:ObjectCreated:*'
+    #             ],
+
+    #         },
+    #     ]})
+
  
