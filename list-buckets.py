@@ -13,7 +13,7 @@ def print_dict(d):
 # 2) Create client connection
 # 3) Retrieve and print received response and bucket information
 if __name__ == "__main__":
-    with open("s3-credentials.json", "r") as f:
+    with open("s3-credentials-local.json", "r") as f:
         credentials = json.loads(f.read())
     endpoint = credentials['endpoint']
     access_key = credentials['access_key']
