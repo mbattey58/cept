@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
 
-#Pure REST request to S3/Ceph backend
-#List buckets
+# Pure REST request to S3/Ceph backend
+# List buckets
+# Code modified from the AWS EC2 API reference documentation
 
 import urllib
 import hashlib
@@ -9,24 +10,14 @@ import datetime
 import base64
 import hmac
 import requests
-
-
-method = 'GET'
-service = 's3'
-host = 'nimbus.pawsey.org.au'
-region = 'us-east-1'
-#endpoint =  'http://localhost:8000'
-endpoint = 'https://nimbus.pawsey.org.au:8080'
-# ListBuckets
-#GET / HTTP/1.1
-request_parameters = ''
+import json
 
 
 def sign(key, msg):
     return hmac.new(key, msg.encode('utf-8'), hashlib.sha256).digest()
 
 
-def getSignatureKey(key, dateStamp, regionName, serviceName):
+def get_signature(key, dateStamp, regionName, serviceName):
     kDate = sign(('AWS4' + key).encode('utf-8'), dateStamp)
     kRegion = sign(kDate, regionName)
     kService = sign(kRegion, serviceName)
@@ -34,50 +25,76 @@ def getSignatureKey(key, dateStamp, regionName, serviceName):
     return kSigning
 
 
-access_key = "00a5752015a64525bc45c55e88d2f162"
-secret_key = "d1b8bdb35b7649deac055c3f77670f7f"
+if __name__ == "__main__":
 
-# Create a date for headers and the credential string
-t = datetime.datetime.utcnow()
-amzdate = t.strftime('%Y%m%dT%H%M%SZ')
-datestamp = t.strftime('%Y%m%d')  # Date w/o time, used in credential scope
+    with open("s3-credentials.json", "r") as f:
+        credentials = json.loads(f.read())
+    access_key = credentials['access_key']
+    secret_key = credentials['secret_key']
 
-canonical_uri = '/'
-canonical_querystring = request_parameters
-payload_hash = hashlib.sha256(('').encode('utf-8')).hexdigest()
-canonical_headers = 'host:' + host + '\n' + "x-amz-content-sha256:" + \
-    payload_hash + '\n' + 'x-amz-date:' + amzdate + '\n'
+    method = 'GET'
+    service = 's3'
+    host = 'nimbus.pawsey.org.au'
+    region = 'us-east-1'
+    # endpoint =  'http://localhost:8000'
+    endpoint = 'https://nimbus.pawsey.org.au:8080'
+    # ListBuckets
+    # GET / HTTP/1.1
+    request_parameters = ''
 
-signed_headers = 'host;x-amz-content-sha256;x-amz-date'
+    # dates for headers credential string
+    t = datetime.datetime.utcnow()
+    amzdate = t.strftime('%Y%m%dT%H%M%SZ')
+    datestamp = t.strftime('%Y%m%d')  # Date w/o time, used in credential scope
 
-canonical_request = method + "\n" + canonical_uri + '\n' + canonical_querystring + \
-    '\n' + canonical_headers + '\n' + signed_headers + '\n' + payload_hash
+    # canonical URI
+    canonical_uri = '/'
+    canonical_querystring = request_parameters
 
-algorithm = 'AWS4-HMAC-SHA256'
-credential_scope = datestamp + '/' + region + \
-    '/' + service + '/' + 'aws4_request'
-string_to_sign = algorithm + '\n' + amzdate + '\n' + credential_scope + \
-    '\n' + hashlib.sha256(canonical_request.encode('utf-8')).hexdigest()
+    # payload, empty in this case
+    payload_hash = hashlib.sha256(('').encode('utf-8')).hexdigest()
 
-signing_key = getSignatureKey(secret_key, datestamp, region, service)
+    # headers: canonical and singned header list
+    canonical_headers = 'host:' + host + '\n' + "x-amz-content-sha256:" + \
+        payload_hash + '\n' + 'x-amz-date:' + amzdate + '\n'
 
-# Sign the string_to_sign using the signing_key
-signature = hmac.new(signing_key, (string_to_sign).encode(
-    'utf-8'), hashlib.sha256).hexdigest()
+    signed_headers = 'host;x-amz-content-sha256;x-amz-date'
 
-authorization_header = algorithm + ' ' + 'Credential=' + access_key + '/' + \
-    credential_scope + ', ' + 'SignedHeaders=' + \
-    signed_headers + ', ' + 'Signature=' + signature
+    # canonical request
+    canonical_request = method + "\n" + canonical_uri + '\n' + canonical_querystring + \
+        '\n' + canonical_headers + '\n' + signed_headers + '\n' + payload_hash
 
-headers = {'Host': host, 'X-Amz-Content-SHA256': payload_hash,
-           'X-Amz-Date': amzdate,  'Authorization': authorization_header}
+    algorithm = 'AWS4-HMAC-SHA256'
+    credential_scope = datestamp + '/' + region + \
+        '/' + service + '/' + 'aws4_request'
 
+    # string to sign
+    string_to_sign = algorithm + '\n' + amzdate + '\n' + credential_scope + \
+        '\n' + hashlib.sha256(canonical_request.encode('utf-8')).hexdigest()
 
-request_url = endpoint   + '?' + canonical_querystring
-print('Request URL = ' + request_url)
-print(headers)
-r = requests.get(request_url, headers=headers)
+    signing_key = get_signature(secret_key, datestamp, region, service)
 
-print('\nResponse')
-print('Response code: %d\n' % r.status_code)
-print(r.text)
+    # sign string with signing key
+    signature = hmac.new(signing_key, (string_to_sign).encode(
+        'utf-8'), hashlib.sha256).hexdigest()
+
+    # build authorisaton header
+    authorization_header = algorithm + ' ' + 'Credential=' + access_key + '/' + \
+        credential_scope + ', ' + 'SignedHeaders=' + \
+        signed_headers + ', ' + 'Signature=' + signature
+
+    # build standard headers
+    headers = {'Host': host, 'X-Amz-Content-SHA256': payload_hash,
+               'X-Amz-Date': amzdate,  'Authorization': authorization_header}
+
+    # build request
+    request_url = endpoint + '?' + canonical_querystring
+
+    # send request and print response
+    print('Request URL = ' + request_url)
+    print(headers)
+    r = requests.get(request_url, headers=headers)
+
+    print('\nResponse')
+    print('Response code: %d\n' % r.status_code)
+    print(r.text)
