@@ -1,17 +1,14 @@
 #!/usr/bin/env python3
+
+#Pure REST request to S3/Ceph backend
+#List buckets
+
 import urllib
 import hashlib
 import datetime
 import base64
-import os
-import sys
-import sys
-import os
-import base64
-import datetime
-import hashlib
 import hmac
-import requests 
+import requests
 
 
 method = 'GET'
@@ -20,9 +17,10 @@ host = 'nimbus.pawsey.org.au'
 region = 'us-east-1'
 #endpoint =  'http://localhost:8000'
 endpoint = 'https://nimbus.pawsey.org.au:8080'
-#ListBuckets
+# ListBuckets
 #GET / HTTP/1.1
 request_parameters = ''
+
 
 def sign(key, msg):
     return hmac.new(key, msg.encode('utf-8'), hashlib.sha256).digest()
@@ -35,6 +33,7 @@ def getSignatureKey(key, dateStamp, regionName, serviceName):
     kSigning = sign(kService, 'aws4_request')
     return kSigning
 
+
 access_key = "00a5752015a64525bc45c55e88d2f162"
 secret_key = "d1b8bdb35b7649deac055c3f77670f7f"
 
@@ -46,7 +45,8 @@ datestamp = t.strftime('%Y%m%d')  # Date w/o time, used in credential scope
 canonical_uri = '/'
 canonical_querystring = request_parameters
 payload_hash = hashlib.sha256(('').encode('utf-8')).hexdigest()
-canonical_headers = 'host:' + host + '\n' + "x-amz-content-sha256:" + payload_hash + '\n' + 'x-amz-date:' + amzdate + '\n'
+canonical_headers = 'host:' + host + '\n' + "x-amz-content-sha256:" + \
+    payload_hash + '\n' + 'x-amz-date:' + amzdate + '\n'
 
 signed_headers = 'host;x-amz-content-sha256;x-amz-date'
 
@@ -57,7 +57,7 @@ algorithm = 'AWS4-HMAC-SHA256'
 credential_scope = datestamp + '/' + region + \
     '/' + service + '/' + 'aws4_request'
 string_to_sign = algorithm + '\n' + amzdate + '\n' + credential_scope + \
-    '\n' + hashlib.sha256(canonical_request.encode('utf-8')).hexdigest()   
+    '\n' + hashlib.sha256(canonical_request.encode('utf-8')).hexdigest()
 
 signing_key = getSignatureKey(secret_key, datestamp, region, service)
 
@@ -69,14 +69,15 @@ authorization_header = algorithm + ' ' + 'Credential=' + access_key + '/' + \
     credential_scope + ', ' + 'SignedHeaders=' + \
     signed_headers + ', ' + 'Signature=' + signature
 
-headers = {'Host': host, 'X-Amz-Content-SHA256': payload_hash, 'X-Amz-Date': amzdate,  'Authorization': authorization_header}
+headers = {'Host': host, 'X-Amz-Content-SHA256': payload_hash,
+           'X-Amz-Date': amzdate,  'Authorization': authorization_header}
 
-# ************* SEND THE REQUEST *************
-request_url = endpoint# + '?'# + canonical_querystring
+
+request_url = endpoint   + '?' + canonical_querystring
 print('Request URL = ' + request_url)
 print(headers)
 r = requests.get(request_url, headers=headers)
 
-print('\nRESPONSE++++++++++++++++++++++++++++++++++++')
+print('\nResponse')
 print('Response code: %d\n' % r.status_code)
 print(r.text)
