@@ -1,1 +1,1 @@
-# Ceph client connection example
+# Ceph client connection examples
