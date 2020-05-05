@@ -75,7 +75,7 @@ if __name__ == "__main__":
     signing_key = get_signature(secret_key, datestamp, region, service)
 
     # sign string with signing key
-    signature = hmac.new(signing_key, (string_to_sign).encode(
+    signature = hmac.new(signing_key, string_to_sign.encode(
         'utf-8'), hashlib.sha256).hexdigest()
 
     # build authorisaton header
