@@ -27,17 +27,21 @@ def get_signature(key, dateStamp, regionName, serviceName):
 
 if __name__ == "__main__":
 
-    with open("s3-credentials.json", "r") as f:
+    with open("s3-credentials2.json", "r") as f:
         credentials = json.loads(f.read())
+
+    protocol   = credentials['protocol']
+    host       = credentials['host']
+    port       = credentials['port']
     access_key = credentials['access_key']
     secret_key = credentials['secret_key']
 
     method = 'GET'
     service = 's3'
-    host = 'nimbus.pawsey.org.au'
-    region = 'us-east-1'
+    region = 'us-east-1' #works with Ceph, any region might work actually
     # endpoint =  'http://localhost:8000'
-    endpoint = 'https://nimbus.pawsey.org.au:8080'
+    endpoint = protocol + '://' + host + (f":{port}" if port else '')
+    
     # ListBuckets
     # GET / HTTP/1.1
     request_parameters = ''
@@ -55,22 +59,38 @@ if __name__ == "__main__":
     payload_hash = hashlib.sha256(('').encode('utf-8')).hexdigest()
 
     # headers: canonical and singned header list
-    canonical_headers = 'host:' + host + '\n' + "x-amz-content-sha256:" + \
-        payload_hash + '\n' + 'x-amz-date:' + amzdate + '\n'
+    canonical_headers = \
+        'host:' + host + '\n' + \
+        "x-amz-content-sha256:" + payload_hash + '\n' + \
+        'x-amz-date:' + amzdate + '\n'
 
     signed_headers = 'host;x-amz-content-sha256;x-amz-date'
 
     # canonical request
-    canonical_request = method + "\n" + canonical_uri + '\n' + canonical_querystring + \
-        '\n' + canonical_headers + '\n' + signed_headers + '\n' + payload_hash
+    canonical_request = \
+        method + "\n" +  \
+        canonical_uri + '\n' +  \
+        canonical_querystring + '\n' + \
+        canonical_headers + '\n' +  \
+        signed_headers + '\n' +  \
+        payload_hash
 
     algorithm = 'AWS4-HMAC-SHA256'
-    credential_scope = datestamp + '/' + region + \
-        '/' + service + '/' + 'aws4_request'
+    credential_scope = \
+        datestamp + \
+        '/' + \
+        region + \
+        '/' + \
+        service + \
+        '/' + \
+        'aws4_request'
 
     # string to sign
-    string_to_sign = algorithm + '\n' + amzdate + '\n' + credential_scope + \
-        '\n' + hashlib.sha256(canonical_request.encode('utf-8')).hexdigest()
+    string_to_sign = \
+        algorithm + '\n' + \
+        amzdate + '\n' + \
+        credential_scope + '\n' + \
+        hashlib.sha256(canonical_request.encode('utf-8')).hexdigest()
 
     signing_key = get_signature(secret_key, datestamp, region, service)
 
@@ -79,13 +99,17 @@ if __name__ == "__main__":
         'utf-8'), hashlib.sha256).hexdigest()
 
     # build authorisaton header
-    authorization_header = algorithm + ' ' + 'Credential=' + access_key + '/' + \
+    authorization_header = \
+        algorithm + ' ' + 'Credential=' + \
+        access_key + '/' + \
         credential_scope + ', ' + 'SignedHeaders=' + \
         signed_headers + ', ' + 'Signature=' + signature
 
     # build standard headers
-    headers = {'Host': host, 'X-Amz-Content-SHA256': payload_hash,
-               'X-Amz-Date': amzdate,  'Authorization': authorization_header}
+    headers = {'Host': host,
+               'X-Amz-Content-SHA256': payload_hash,
+               'X-Amz-Date': amzdate,
+               'Authorization': authorization_header}
 
     # build request
     request_url = endpoint + '?' + canonical_querystring
@@ -98,3 +122,4 @@ if __name__ == "__main__":
     print('\nResponse')
     print('Response code: %d\n' % r.status_code)
     print(r.text)
+
