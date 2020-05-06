@@ -14,7 +14,7 @@ if __name__ == "__main__":
 
     bucket_name = "uv-bucket-1"
     key_name = "key-3"
-    payload = "key-2 payload"
+    payload = "key-3 payload"
 
     # payload, empty in this case
     payload_hash = s3.hash(payload)

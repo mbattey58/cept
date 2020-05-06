@@ -2,72 +2,108 @@
 import s3v4_rest as s3
 import requests
 import json
-
+import os
 # PutObject PUT /bucket/key + data as explicit multi-part upload
 # generate 'tmp-blob' file with:
 # dd if=/dev/zero of=tmp-blob bs=1024 count=$((1024*8))
 # split file with:
 # split -n 4 -a 1 --numeric-suffixes=1 tmp-blob tmp-blob
+# WARNING: depending on the server side configuration you might end up getting
+# an EntityTooSmall error if the chunk size is e.g. smaller than 5 MB
+
+
+from array import array
+
+
+def bytes_from_file(fname):
+    """Use this function to read bytes from files when using 'data' instead of
+       'files' in requests.* functions
+    """
+    data = array('B')
+
+    with open(fname, 'rb') as f:
+        data.fromfile(f, os.stat(fname).st_size)
+
+    return data.tobytes()
 
 
 if __name__ == "__main__":
+
     # read configuration information
     with open("s3-credentials2.json", "r") as f:
         credentials = json.loads(f.read())
 
-    bucket_name = "uv-bucket-1"
-    key_name = "key-3"
-    payload = "key-2 payload"
+    bucket_name = "uv-bucket-3"
+    key_name = "key-multipart-test10"
 
-    # payload, empty in this case
-    payload_hash = s3.hash(payload)
+    # request #1 initiate multipart upload
 
-    # build request #1: text in body and payload hashing
+    # BEGIN UPLOAD: send post request, get back request id
+    # identifying transaction
     request_url, headers = s3.build_request_url(
         config=credentials,
-        req_method="PUT",
-        parameters=None,
-        payload_hash=payload_hash,
-        payload_length=len(payload),
-        uri_path=f"/{bucket_name}/{key_name}",
-    )
-
-    # send request and print response
-    print("Request URL = " + request_url)
-    print(headers)
-    r = requests.put(request_url, payload, headers=headers)
-
-    print("\nResponse")
-    print("Response code: %d\n" % r.status_code)
-    if r.text:
-        print(r.text)
-        # parse and print XML response
-        print("\n")
-        s3.print_xml_response(r.text)
-        print("\n")
-
-    # build request #2: binary file read from filesytem, no hashing
-    request_url, headers = s3.build_request_url(
-        config=credentials,
-        req_method="PUT",
-        parameters=None,
+        req_method="POST",
+        parameters={"uploads": ''},
         payload_hash=s3.UNSIGNED_PAYLOAD,
-        payload_length=len(payload),
+        payload_length=0,
         uri_path=f"/{bucket_name}/{key_name}",
     )
-
-    # send request and print response
-    print("Request URL = " + request_url)
-    print(headers)
-    r = requests.put(request_url, data=open("tmp-blob", "rb"), headers=headers)
-
-    print("\nResponse")
-    print("Response code: %d\n" % r.status_code)
-    if r.text:
+   
+    r = requests.post(request_url, '', headers=headers)
+    print(r.status_code)
+    if r.status_code != 200:
         print(r.text)
-        # parse and print XML response
-        print("\n")
-        s3.print_xml_response(r.text)
-        print("\n")
+        print(r.headers)
+    request_id = s3.get_upload_id(r.text)
 
-    print(r.headers)
+    # SEND PARTS:
+    fname = "tmp-blob"  # prefix
+    parts = []
+    number_of_chunks = 2  # == number of files
+    for part in range(1, number_of_chunks + 1):
+        partname = fname + str(part)
+        print(partname)
+        payload_size = os.stat(partname).st_size
+        request_url, headers = s3.build_request_url(
+            config=credentials,
+            req_method="PUT",
+            parameters={"partNumber": str(part), "uploadId": request_id},
+            payload_hash=s3.UNSIGNED_PAYLOAD,
+            payload_length=payload_size,
+            uri_path=f"/{bucket_name}/{key_name}",
+        )
+
+        files = {'file': (partname, open(partname, 'rb'))}
+        r = requests.put(request_url,
+                         files=files,
+                         headers=headers)
+        print(f"status: {r.status_code}")
+        if r.status_code == 200:
+            print(r.text)
+            print(r.headers)
+        
+        tag_id = s3.get_tag_id(r.headers)
+        print(tag_id)
+        parts.append((part, tag_id))
+
+    # END TRANSACTION
+    # compose XML request with part list
+    multipart_list = s3.build_multipart_list(parts)
+
+    request_url, headers = s3.build_request_url(
+        config=credentials,
+        req_method="POST",
+        parameters={"uploadId": request_id},
+        payload_hash=s3.UNSIGNED_PAYLOAD,
+        payload_length=len(multipart_list),
+        uri_path=f"/{bucket_name}/{key_name}",
+    )
+    print(len(multipart_list))
+    r = requests.post(request_url,
+                      data=multipart_list,
+                      headers=headers)
+
+    print(f"status: {r.status_code}")
+    if r.status_code != 200:
+        print(r.text)
+        print(r.headers)

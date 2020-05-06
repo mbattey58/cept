@@ -20,7 +20,7 @@ import hashlib
 import datetime
 import hmac
 import xml.etree.ElementTree as ET
-from typing import Dict, Tuple
+from typing import Dict, Tuple, List
 
 ###############################################################################
 # Private interface
@@ -65,8 +65,8 @@ def _clean_xml_tag(tag):
     Returns:
         XML tag without {..} prefix
     """
-    closing_brace_index = tag.index('}')
-    return tag if not closing_brace_index else tag[closing_brace_index+1:]
+    closing_brace_index = tag.find('}')
+    return tag if closing_brace_index < 0 else tag[closing_brace_index+1:]
 
 
 def _print_xml_tree(node, indentation_level=0, filter=lambda t: True):
@@ -91,6 +91,8 @@ def _print_xml_tree(node, indentation_level=0, filter=lambda t: True):
         _print_xml_tree(child, indentation_level + 1)
 
 
+_XML_NAMESPACE_PREFIX = "{http://s3.amazonaws.com/doc/2006-03-01/}"
+
 ###############################################################################
 # Public interface
 
@@ -98,7 +100,58 @@ def _print_xml_tree(node, indentation_level=0, filter=lambda t: True):
 UNSIGNED_PAYLOAD = "UNSIGNED-PAYLOAD"  # identify payloads with no hash
 
 
-def print_xml_response(text: str):
+def build_multipart_list(parts: List[Tuple[int, str]]) -> str:
+    """Return XML multipart message with list of part numbers & ETags
+
+    Args:
+        parts (List[Tuple[int, str]]): list of (part num, ETag) tuples
+    Returns:
+        XML part list
+    """
+    begin = '<CompleteMultipartUpload>'
+    body = ""
+    for (partnum, etag) in parts:
+        body += f"<Part><ETag>{etag}</ETag><PartNumber>{partnum}</PartNumber></Part>"
+
+    end = "</CompleteMultipartUpload>"
+
+    return begin + body + end
+
+
+def get_upload_id(xml_response: str):
+    """Extract UploadId value from xml response
+
+    This function in mainly meant to be used when performing explicit
+    multipart uploads to extract the request/transaction id after
+    the first POST request to initiate the multipart upload.
+
+    Args:
+        xml_response (str): UploadId tag returned by S3 server
+    Returns:
+        str: request id
+
+    """
+    tree = ET.fromstring(xml_response)
+    return tree.find(f"{_XML_NAMESPACE_PREFIX}UploadId").text
+
+
+def get_tag_id(response_header: Dict[str, str]):
+    """Extract ETag header field from response header
+
+    This function in mainly meant to be used when performing explicit
+    multipart uploads to extract the ETag id of each request to compose
+    the final XML request to be sent when the transation if finalised.
+
+    Args:
+        response_header (Dict[str, str]): header returned by S3 server
+    Returns:
+        str: ETag id
+
+    """
+    return response_header['ETag']
+
+
+def print_xml(text: str):
     """Print XML tree.
 
     Args:
@@ -106,6 +159,8 @@ def print_xml_response(text: str):
     Returns:
         None
     """
+    if not text:
+        return
     tree = ET.fromstring(text)
     _print_xml_tree(tree)
 
