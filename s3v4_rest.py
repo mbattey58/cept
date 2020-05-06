@@ -1,4 +1,4 @@
-"""Send pure REST request to S3 v4 client
+"""Send pure REST request to S3 using v4 client
 
    Builds URL requests from
    * endpoint
