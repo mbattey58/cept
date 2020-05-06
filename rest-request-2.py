@@ -3,7 +3,7 @@ import s3v4_rest as s3
 import requests
 import json
 
-
+#ListBucket (empty GET request)
 
 if __name__ == "__main__":
     # read configuration information

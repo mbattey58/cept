@@ -13,7 +13,7 @@ class GetHandler(
         ):
 
     def do_GET(self):
-        logging.error(self.headers)
+        logging.info(self.headers)
         SimpleHTTPServer.SimpleHTTPRequestHandler.do_GET(self)
 
 
