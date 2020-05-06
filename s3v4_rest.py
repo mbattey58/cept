@@ -4,7 +4,7 @@
 # List buckets
 # Code modified from the AWS EC2 API reference documentation
 # Author: Ugo Varetto
-
+print("X")
 from urllib.parse import urlencode
 import hashlib
 import datetime
@@ -44,6 +44,12 @@ def _print_xml_tree(node, indentation_level=0, filter=lambda t: True):
 def print_xml_response(text: str):
     tree = ET.fromstring(text)
     _print_xml_tree(tree)
+
+def hash(data):
+    if type(data) == str:
+        return hashlib.sha256(('').encode('utf-8')).hexdigest()
+    else:
+        return hashlib.sha256(data).hexdigest()
 
 # Type declarations
 S3Config = Dict[str, str]

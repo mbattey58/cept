@@ -1,16 +1,17 @@
+#!/usr/bin/env python3
 import s3v4_rest as s3
 import requests
-import hashlib
 import json
 
-if __name__ == "__main__":
 
+
+if __name__ == "__main__":
     # read configuration information
     with open("s3-credentials2.json", "r") as f:
         credentials = json.loads(f.read())
 
     # payload, empty in this case
-    payload_hash = hashlib.sha256(('').encode('utf-8')).hexdigest()
+    payload_hash = s3.hash('')
 
     # build request
     request_url, headers = s3.build_request_url(credentials,
