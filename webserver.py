@@ -1,5 +1,7 @@
 #!/usr/bin/env python3
 
+#This code is not mine, credit goes to https://gist.github.com/phrawzty
+#https://gist.github.com/phrawzty/62540f146ee5e74ea1ab
 import http.server as SimpleHTTPServer
 import socketserver as SocketServer
 import logging
