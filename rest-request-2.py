@@ -5,7 +5,7 @@
 # Code modified from the AWS EC2 API reference documentation
 # Author: Ugo Varetto
 
-import urllib
+from urllib.parse import urlencode
 import hashlib
 import datetime
 import base64
@@ -13,6 +13,7 @@ import hmac
 import requests
 import json
 import xml.etree.ElementTree as ET
+from typing import Dict, Tuple
 
 # standard signing functions from AWS
 def sign(key, msg):
@@ -43,42 +44,42 @@ def print_xml_tree(node, indentation_level=0, filter=lambda t: True):
     for child in node:
         print_xml_tree(child, indentation_level + 1)
 
+# Type declarations
+S3Config = Dict[str, str]
+RequestMethod = str
+RequestParameters = Dict[str, str]
+Headers = Dict[str, str]
+URL = str
+Request = Tuple[URL, Headers]
+# return tuple(request url, headers)
+def build_request_url(config: S3Config, 
+                      req_method: RequestMethod,
+                      parameters: RequestParameters,
+                      payload_hash: str):
+    
+    protocol   = config['protocol']
+    host       = config['host']
+    port       = config['port']
+    access_key = config['access_key']
+    secret_key = config['secret_key']
 
-if __name__ == "__main__":
-
-    # read configuration information
-    with open("s3-credentials2.json", "r") as f:
-        credentials = json.loads(f.read())
-
-    protocol   = credentials['protocol']
-    host       = credentials['host']
-    port       = credentials['port']
-    access_key = credentials['access_key']
-    secret_key = credentials['secret_key']
-
-    method = 'GET'
+    method = req_method
     service = 's3'
     region = 'us-east-1' #works with Ceph, any region might work actually
-    # endpoint =  'http://localhost:8000'
     endpoint = protocol + '://' + host + (f":{port}" if port else '')
-    
-    # ListBuckets
-    # GET / HTTP/1.1
-    request_parameters = ''
+
+    request_parameters = urlencode(parameters)
 
     # dates for headers credential string
     t = datetime.datetime.utcnow()
     amzdate = t.strftime('%Y%m%dT%H%M%SZ')
     datestamp = t.strftime('%Y%m%d')  # Date w/o time, used in credential scope
 
-    # canonical URI
+     # canonical URI
     canonical_uri = '/'
     canonical_querystring = request_parameters
 
-    # payload, empty in this case
-    payload_hash = hashlib.sha256(('').encode('utf-8')).hexdigest()
-
-    # headers: canonical and singned header list
+      # headers: canonical and singned header list
     canonical_headers = \
         'host:' + host + '\n' + \
         "x-amz-content-sha256:" + payload_hash + '\n' + \
@@ -86,7 +87,7 @@ if __name__ == "__main__":
 
     signed_headers = 'host;x-amz-content-sha256;x-amz-date'
 
-    # canonical request
+     # canonical request
     canonical_request = \
         method + "\n" +  \
         canonical_uri + '\n' +  \
@@ -134,6 +135,27 @@ if __name__ == "__main__":
     # build request
     request_url = endpoint + '?' + canonical_querystring
 
+    return request_url, headers
+
+
+
+if __name__ == "__main__":
+
+    # read configuration information
+    with open("s3-credentials2.json", "r") as f:
+        credentials = json.loads(f.read())
+
+
+    # payload, empty in this case
+    payload_hash = hashlib.sha256(('').encode('utf-8')).hexdigest()
+
+   
+    # build request
+    request_url, headers =  build_request_url(credentials, 
+                                              'GET',
+                                              {'':''},
+                                              payload_hash)
+
     # send request and print response
     print('Request URL = ' + request_url)
     print(headers)
@@ -148,3 +170,7 @@ if __name__ == "__main__":
     tree = ET.fromstring(r.text)
     print_xml_tree(tree)
     print("\n")
+
+   
+
+
