@@ -3,6 +3,7 @@
 # Pure REST request to S3/Ceph backend
 # List buckets
 # Code modified from the AWS EC2 API reference documentation
+# Author: Ugo Varetto
 
 import urllib
 import hashlib
@@ -11,8 +12,7 @@ import base64
 import hmac
 import requests
 import json
-import xmldict
-
+import xml.etree.ElementTree as ET
 
 def sign(key, msg):
     return hmac.new(key, msg.encode('utf-8'), hashlib.sha256).digest()
@@ -24,6 +24,23 @@ def get_signature(key, dateStamp, regionName, serviceName):
     kService = sign(kRegion, serviceName)
     kSigning = sign(kService, 'aws4_request')
     return kSigning
+
+# ElementTree prefixes tags with a namespace if present
+def clean_xml_tag(tag):
+    closing_brace_index = tag.index('}')
+    return tag if not closing_brace_index else tag[closing_brace_index+1:]
+
+
+#note: Python as a limit on the recursion level it can handle,
+#      this is just implemented like this without returning functions
+#      or using stacks to keep the code simple
+def print_xml_tree(node, indentation_level=0, filter=lambda t: True):
+    BLANKS = 2
+    indent = indentation_level * BLANKS
+    if filter(node.tag):
+        print(" "*indent + f"{clean_xml_tag(node.tag)}: {node.text}")
+    for child in node:
+        print_xml_tree(child, indentation_level + 1)
 
 
 if __name__ == "__main__":
@@ -125,4 +142,8 @@ if __name__ == "__main__":
     print('Response code: %d\n' % r.status_code)
     print(r.text)
 
-
+    #parse and print XML response
+    print("\n")
+    tree = ET.fromstring(r.text)
+    print_xml_tree(tree)
+    print("\n")
