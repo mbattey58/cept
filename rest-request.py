@@ -11,6 +11,7 @@ import base64
 import hmac
 import requests
 import json
+import xmldict
 
 
 def sign(key, msg):
@@ -27,6 +28,7 @@ def get_signature(key, dateStamp, regionName, serviceName):
 
 if __name__ == "__main__":
 
+    # read configuration information
     with open("s3-credentials2.json", "r") as f:
         credentials = json.loads(f.read())
 
@@ -122,4 +124,5 @@ if __name__ == "__main__":
     print('\nResponse')
     print('Response code: %d\n' % r.status_code)
     print(r.text)
+
 
