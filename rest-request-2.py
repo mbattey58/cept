@@ -70,16 +70,16 @@ def build_request_url(config: S3Config,
 
     request_parameters = urlencode(parameters)
 
-    # dates for headers credential string
-    t = datetime.datetime.utcnow()
-    amzdate = t.strftime('%Y%m%dT%H%M%SZ')
-    datestamp = t.strftime('%Y%m%d')  # Date w/o time, used in credential scope
-
      # canonical URI
     canonical_uri = '/'
     canonical_querystring = request_parameters
 
-      # headers: canonical and singned header list
+    # dates for headers credential string
+    dt = datetime.datetime.utcnow()
+    amzdate = dt.strftime('%Y%m%dT%H%M%SZ')
+    datestamp = dt.strftime('%Y%m%d')  # Date w/o time, used in credential scope
+
+    # headers: canonical and singned header list
     canonical_headers = \
         'host:' + host + '\n' + \
         "x-amz-content-sha256:" + payload_hash + '\n' + \
