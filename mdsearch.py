@@ -24,7 +24,7 @@ if __name__ == "__main__":
     request_url, headers = s3.build_request_url(
         config=credentials,
         req_method='GET',
-        parameters={'mdsearch':''},
+        parameters={'mdsearch': ''},
         payload_hash=s3.UNSIGNED_PAYLOAD,
         payload_length=0,
         uri_path=f"/{bucket_name}",
@@ -44,10 +44,10 @@ if __name__ == "__main__":
     request_url, headers = s3.build_request_url(
         config=credentials,
         req_method='GET',
-        parameters={"meta1": '"==123"'},
+        parameters={"query": "meta1==123"},
         payload_hash=s3.UNSIGNED_PAYLOAD,
         payload_length=0,
-        uri_path=f"/{bucket_name}/query"
+        uri_path=f"/{bucket_name}"
     )
 
     # send request and print response
