@@ -34,7 +34,7 @@ def clean_xml_tag(tag):
     return tag if not closing_brace_index else tag[closing_brace_index+1:]
 
 
-#note: Python as a limit on the recursion level it can handle,
+# note: Python as a limit on the recursion level it can handle,
 #      this is just implemented like this without returning functions
 #      or using stacks to keep the code simple
 def print_xml_tree(node, indentation_level=0, filter=lambda t: True):
@@ -52,18 +52,18 @@ if __name__ == "__main__":
     with open("config/s3-credentials2.json", "r") as f:
         credentials = json.loads(f.read())
 
-    protocol   = credentials['protocol']
-    host       = credentials['host']
-    port       = credentials['port']
+    protocol = credentials['protocol']
+    host = credentials['host']
+    port = credentials['port']
     access_key = credentials['access_key']
     secret_key = credentials['secret_key']
 
     method = 'GET'
     service = 's3'
-    region = 'us-east-1' #works with Ceph, any region might work actually
+    region = 'us-east-1'  # works with Ceph, any region might work actually
     # endpoint =  'http://localhost:8000'
     endpoint = protocol + '://' + host + (f":{port}" if port else '')
-    
+
     # ListBuckets
     # GET / HTTP/1.1
     request_parameters = ''
@@ -145,7 +145,7 @@ if __name__ == "__main__":
     print('Response code: %d\n' % r.status_code)
     print(r.text)
 
-    #parse and print XML response
+    # parse and print XML response
     print("\n")
     tree = ET.fromstring(r.text)
     print_xml_tree(tree)
