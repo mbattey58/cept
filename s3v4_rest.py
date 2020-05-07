@@ -194,7 +194,8 @@ def build_request_url(config: S3Config = None,
                       parameters: RequestParameters = None,
                       payload_hash: str = UNSIGNED_PAYLOAD,
                       payload_length: int = 0,
-                      uri_path: str = '/') -> Request:
+                      uri_path: str = '/',
+                      additional_headers: Dict[str, str] = None) -> Request:
 
     """Build S3 REST request and headers
 
@@ -218,6 +219,8 @@ def build_request_url(config: S3Config = None,
     Returns:
         Tuple[URL, Headers
     """
+    # TODO: raise excpetion if any key in 'additional_headers' matches keys
+    # in headers dictionary ??
 
     protocol = config['protocol']
     host = config['host']
@@ -248,7 +251,26 @@ def build_request_url(config: S3Config = None,
         "x-amz-content-sha256:" + payload_hash + '\n' + \
         'x-amz-date:' + amzdate + '\n'
 
-    signed_headers = 'host;x-amz-content-sha256;x-amz-date'
+    # add additional headers
+    if additional_headers:
+        for k, v in additional_headers.items():
+            canonical_headers += f"{k}:{v}" + '\n'
+
+    # extract all x-amz-* headers, add defaults, sort and
+    # add to signed headers list
+    signed_headers_list = ['host', 'x-amz-content-sha256', 'x-amz-date']
+    if additional_headers:
+        xamz = [x for x in additional_headers.keys()
+                if x.lower()[:5] == 'x-amz']
+        lk = [x.lower() for x in xamz]
+        signed_headers_list.extend(lk)
+        # ensure unique keys for signing purposes
+        signed_headers_list = [x for x in set(signed_headers_list)]
+
+    signed_headers_list.sort()
+
+    # build signed header string
+    signed_headers = ";".join(signed_headers_list)
 
     # canonical request
     canonical_request = \
@@ -293,8 +315,12 @@ def build_request_url(config: S3Config = None,
     headers = {'Host': host,
                'Content-length': str(payload_length),
                'X-Amz-Content-SHA256': payload_hash,
-               'X-Amz-Date': amzdate,
-               'Authorization': authorization_header}
+               'X-Amz-Date': amzdate}
+
+    if additional_headers:
+        headers.update(additional_headers)
+
+    headers.update({'Authorization': authorization_header})
 
     # build request
     request_url = endpoint + canonical_uri
