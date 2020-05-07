@@ -111,7 +111,8 @@ def build_multipart_list(parts: List[Tuple[int, str]]) -> str:
     begin = '<CompleteMultipartUpload>'
     body = ""
     for (partnum, etag) in parts:
-        body += f"<Part><ETag>{etag}</ETag><PartNumber>{partnum}</PartNumber></Part>"
+        body += f"<Part><ETag>{etag}</ETag>"
+        body += f"<PartNumber>{partnum}</PartNumber></Part>"
 
     end = "</CompleteMultipartUpload>"
 

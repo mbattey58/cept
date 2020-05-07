@@ -20,7 +20,7 @@
 
     Ceph supports parallel upload of multipart data, which in this case is
     files, but does not have to be, multiplart can be used to store e.g.
-    streaming data (in this case signing/hashing has to be handled 
+    streaming data (in this case signing/hashing has to be handled
     differently).
 
     generate 'tmp-blob' file with:
@@ -28,7 +28,7 @@
     split file with:
         split -n 4 -a 1 --numeric-suffixes=1 tmp-blob tmp-blob
 
-    WARNING: depending on the server-side configuration you might end up 
+    WARNING: depending on the server-side configuration you might end up
     getting an "EntityTooSmall" error if the chunk size is e.g. smaller than
     a specific size (have seen 5 MB on some platforms).
     """
@@ -72,7 +72,7 @@ if __name__ == "__main__":
         payload_length=0,
         uri_path=f"/{bucket_name}/{key_name}",
     )
-   
+
     r = requests.post(request_url, '', headers=headers)
     print(r.status_code)
     if r.status_code != 200:
@@ -102,10 +102,10 @@ if __name__ == "__main__":
                          files=files,
                          headers=headers)
         print(f"status: {r.status_code}")
-        if r.status_code == 200:
+        if r.status_code != 200:
             print(r.text)
             print(r.headers)
-        
+
         tag_id = s3.get_tag_id(r.headers)
         print(tag_id)
         parts.append((part, tag_id))
