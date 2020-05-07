@@ -1,5 +1,7 @@
 # Ceph client connection examples
 
+Various examples of how to send REST requests to S3 using only raw URLs + HTTP headers.
+
 `s3v4_rest.py` is a module implementing a generic interface to `S3/Ceph`, taking care of building the signed request header and generating the REST URLs, MIT licensed. PEP8, static typing not fully applied everywhere, wont' pass `mypy` validation.
 
 Authentication and endpoint information is read from json files with the following format:
