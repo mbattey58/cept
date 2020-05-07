@@ -16,7 +16,7 @@ In the examples authentication and endpoint information is read from json files 
     "port"      : 8888
 }
 ```
-Tested on Python 3.7 and 3.8rc1.
+Tested on Python 3.7 and 3.8.
 
 Dependencies
 
