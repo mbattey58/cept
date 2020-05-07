@@ -1,6 +1,6 @@
 # Ceph client connection examples
 
-`s3v4_rest.py` is a module implementing a generic interface to S3, taking care of building the signed request header and generating the REST URLs, MIT licensed.
+`s3v4_rest.py` is a module implementing a generic interface to `S3/Ceph`, taking care of building the signed request header and generating the REST URLs, MIT licensed. PEP8, static typing not fully applied everywhere, wont' pass `mypy` validation.
 
 Authentication and endpoint information is read from json files with the following format:
 
