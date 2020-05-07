@@ -16,7 +16,7 @@ if __name__ == "__main__":
     # build request
     request_url, headers = s3.build_request_url(credentials,
                                                 'GET',
-                                                {'': ''},
+                                                None,
                                                 payload_hash)
 
     # send request and print response

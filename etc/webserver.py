@@ -8,6 +8,7 @@ import logging
 
 PORT = 8000
 
+
 class GetHandler(
         SimpleHTTPServer.SimpleHTTPRequestHandler
         ):
