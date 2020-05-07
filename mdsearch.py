@@ -7,44 +7,46 @@ import json
 
 if __name__ == "__main__":
     # read configuration information
-    with open("config/s3-credentials2.json", "r") as f:
+    with open("config/s3-credentials3.json", "r") as f:
         credentials = json.loads(f.read())
 
-    metadata_key = "meta1"
+    metadata_key = "meta2"
 
     # payload, empty in this case
     payload_hash = s3.hash('')
 
-    bucket_name = "uv-bucket-3"
+    # bucket_name = "uv-bucket-3"
+    bucket_name = "first"
 
-    # https://documentation.suse.com/ses/6/html/ses-all/cha-ceph-gw.html
-    # enable indexing
-    search_header = {'x-amz-meta-search': "meta1"}
+    if False:
+        # https://documentation.suse.com/ses/6/html/ses-all/cha-ceph-gw.html
+        # enable indexing
+        search_header = {'x-amz-meta-search': "Content-Type"}
+        # build request
+        request_url, headers = s3.build_request_url(
+            config=credentials,
+            req_method='GET',
+            parameters={'mdsearch': ''},
+            payload_hash=s3.UNSIGNED_PAYLOAD,
+            payload_length=0,
+            uri_path=f"/{bucket_name}",
+            additional_headers=search_header
+        )
+
+        # send request and print response
+        print('Request URL = ' + request_url)
+        print(headers)
+        r = requests.get(request_url, headers=headers)
+
+        print('\nResponse')
+        print('Response code: %d\n' % r.status_code)
+        print(r.text)
+
     # build request
     request_url, headers = s3.build_request_url(
         config=credentials,
         req_method='GET',
-        parameters={'mdsearch': ''},
-        payload_hash=s3.UNSIGNED_PAYLOAD,
-        payload_length=0,
-        uri_path=f"/{bucket_name}",
-        additional_headers=search_header
-    )
-
-    # send request and print response
-    print('Request URL = ' + request_url)
-    print(headers)
-    r = requests.get(request_url, headers=headers)
-
-    print('\nResponse')
-    print('Response code: %d\n' % r.status_code)
-    print(r.text)
-
-    # build request
-    request_url, headers = s3.build_request_url(
-        config=credentials,
-        req_method='GET',
-        parameters={"query": "meta1==123"},
+        parameters={"query": "name==file-020"},
         payload_hash=s3.UNSIGNED_PAYLOAD,
         payload_length=0,
         uri_path=f"/{bucket_name}"
