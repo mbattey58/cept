@@ -1,17 +1,42 @@
 #!/usr/bin/env python3
+"""Simple multipart data upload through S3 using raw REST requests
+
+   __author__ = "Ugo Varetto"
+
+   Send multipart upload requests reading data from files or memory.
+
+    1. read credentials (keys and endpoint information)
+    2. initiate transfer through multipart POST request and record
+       returned UploadId, this is the transaction idenfier
+    3. send each chunck with PUT requests, recording part # and ETag id
+       returned by server
+    4. finish transfer by sending a final POST request containing:
+       * UploadId identifying upload transaction
+       * list of (part number, ETag) entried of uploaded files
+
+    Payload signing/hashing is not applied to individual payloads, probably
+    better to compute MD5/hashing on data externally at data creationd time
+    and submit checksum/hash as metadata.
+
+    Ceph supports parallel upload of multipart data, which in this case is
+    files, but does not have to be, multiplart can be used to store e.g.
+    streaming data (in this case signing/hashing has to be handled 
+    differently).
+
+    generate 'tmp-blob' file with:
+        d if=/dev/zero of=tmp-blob bs=1024 count=$((1024*8))
+    split file with:
+        split -n 4 -a 1 --numeric-suffixes=1 tmp-blob tmp-blob
+
+    WARNING: depending on the server-side configuration you might end up 
+    getting an "EntityTooSmall" error if the chunk size is e.g. smaller than
+    a specific size (have seen 5 MB on some platforms).
+    """
+
 import s3v4_rest as s3
 import requests
 import json
 import os
-# PutObject PUT /bucket/key + data as explicit multi-part upload
-# generate 'tmp-blob' file with:
-# dd if=/dev/zero of=tmp-blob bs=1024 count=$((1024*8))
-# split file with:
-# split -n 4 -a 1 --numeric-suffixes=1 tmp-blob tmp-blob
-# WARNING: depending on the server side configuration you might end up getting
-# an EntityTooSmall error if the chunk size is e.g. smaller than 5 MB
-
-
 from array import array
 
 
@@ -28,7 +53,6 @@ def bytes_from_file(fname):
 
 
 if __name__ == "__main__":
-
     # read configuration information
     with open("s3-credentials2.json", "r") as f:
         credentials = json.loads(f.read())
@@ -38,7 +62,7 @@ if __name__ == "__main__":
 
     # request #1 initiate multipart upload
 
-    # BEGIN UPLOAD: send post request, get back request id
+    # 1 BEGIN UPLOAD: send post request, get back request id
     # identifying transaction
     request_url, headers = s3.build_request_url(
         config=credentials,
@@ -56,7 +80,7 @@ if __name__ == "__main__":
         print(r.headers)
     request_id = s3.get_upload_id(r.text)
 
-    # SEND PARTS:
+    # 2 SEND PARTS:
     fname = "tmp-blob"  # prefix
     parts = []
     number_of_chunks = 2  # == number of files
@@ -86,7 +110,7 @@ if __name__ == "__main__":
         print(tag_id)
         parts.append((part, tag_id))
 
-    # END TRANSACTION
+    # 3 END TRANSACTION
     # compose XML request with part list
     multipart_list = s3.build_multipart_list(parts)
 
