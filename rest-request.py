@@ -14,6 +14,7 @@ import requests
 import json
 import xml.etree.ElementTree as ET
 
+
 # standard signing functions from AWS
 def sign(key, msg):
     return hmac.new(key, msg.encode('utf-8'), hashlib.sha256).digest()
@@ -25,6 +26,7 @@ def get_signature(key, dateStamp, regionName, serviceName):
     kService = sign(kRegion, serviceName)
     kSigning = sign(kService, 'aws4_request')
     return kSigning
+
 
 # ElementTree prefixes tags with a namespace if present
 def clean_xml_tag(tag):
@@ -47,7 +49,7 @@ def print_xml_tree(node, indentation_level=0, filter=lambda t: True):
 if __name__ == "__main__":
 
     # read configuration information
-    with open("s3-credentials2.json", "r") as f:
+    with open("config/s3-credentials2.json", "r") as f:
         credentials = json.loads(f.read())
 
     protocol   = credentials['protocol']

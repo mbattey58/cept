@@ -54,7 +54,7 @@ def bytes_from_file(fname):
 
 if __name__ == "__main__":
     # read configuration information
-    with open("s3-credentials2.json", "r") as f:
+    with open("config/s3-credentials2.json", "r") as f:
         credentials = json.loads(f.read())
 
     bucket_name = "uv-bucket-3"
