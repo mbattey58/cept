@@ -7,7 +7,7 @@ import json
 
 if __name__ == "__main__":
     # read configuration information
-    with open("config/s3-credentials3.json", "r") as f:
+    with open("config/s3-credentials2.json", "r") as f:
         credentials = json.loads(f.read())
 
     metadata_key = "meta2"
@@ -15,8 +15,9 @@ if __name__ == "__main__":
     # payload, empty in this case
     payload_hash = s3.hash('')
 
-    # bucket_name = "uv-bucket-3"
-    bucket_name = "first"
+    #
+    bucket_name = "uv-bucket-3"
+    #bucket_name = "first"
 
     if False:
         # https://documentation.suse.com/ses/6/html/ses-all/cha-ceph-gw.html
@@ -46,7 +47,7 @@ if __name__ == "__main__":
     request_url, headers = s3.build_request_url(
         config=credentials,
         req_method='GET',
-        parameters={"query": "name==file-020"},
+        parameters={"query": "size>10"},
         payload_hash=s3.UNSIGNED_PAYLOAD,
         payload_length=0,
         uri_path=f"/{bucket_name}"
