@@ -216,6 +216,9 @@ def build_request_url(config: S3Config = None,
                             for non hashed payload
         payload_length (int): length of payload
         uri_path (str): path appended after protocol:hostname:port
+        additiona_headers (Dic[str,str]): additional custom header, the 
+                                          ones starting with 'x-amz-'
+                                          are added to the singed list
     Returns:
         Tuple[URL, Headers
     """

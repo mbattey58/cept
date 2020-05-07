@@ -16,6 +16,19 @@ Authentication and endpoint information is read from json files with the followi
     "port"      : 8888
 }
 ```
+Tested on Python 3.7 and 3.8rc1.
+
+Dependencies
+
+```python
+from urllib.parse import urlencode
+import hashlib
+import datetime
+import hmac
+import xml.etree.ElementTree as ET
+from typing import Dict, Tuple, List
+```
+
 
 [Ceph S3 requests](https://access.redhat.com/documentation/en-us/red_hat_ceph_storage/3/html/developer_guide/ceph-object-gateway-s3-api#s3-api-put-bucket-lifecycle)
 
