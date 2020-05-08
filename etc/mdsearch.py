@@ -47,7 +47,7 @@ if __name__ == "__main__":
     request_url, headers = s3.build_request_url(
         config=credentials,
         req_method='GET',
-        parameters={"query": "size>10"},
+        parameters={"query": "size==10"},
         payload_hash=s3.UNSIGNED_PAYLOAD,
         payload_length=0,
         uri_path=f"/{bucket_name}"

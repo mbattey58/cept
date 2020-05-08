@@ -100,6 +100,18 @@ _XML_NAMESPACE_PREFIX = "{http://s3.amazonaws.com/doc/2006-03-01/}"
 UNSIGNED_PAYLOAD = "UNSIGNED-PAYLOAD"  # identify payloads with no hash
 
 
+def encode_url(params: Dict):
+    """Forward to urlencode, since we are alrady importing urlib.parse here
+       do not require client code to re-import it.
+
+    Args:
+        params (Dict): dictionary containing list of key, value pairs
+    Returns:
+        str: URL-encoded text
+    """
+    return urlencode(params)
+
+
 def build_multipart_list(parts: List[Tuple[int, str]]) -> str:
     """Return XML multipart message with list of part numbers & ETags
 
@@ -216,7 +228,7 @@ def build_request_url(config: S3Config = None,
                             for non hashed payload
         payload_length (int): length of payload
         uri_path (str): path appended after protocol:hostname:port
-        additiona_headers (Dic[str,str]): additional custom header, the 
+        additiona_headers (Dic[str,str]): additional custom header, the
                                           ones starting with 'x-amz-'
                                           are added to the singed list
     Returns:
@@ -225,6 +237,7 @@ def build_request_url(config: S3Config = None,
     # TODO: raise excpetion if any key in 'additional_headers' matches keys
     # in headers dictionary ??
 
+    # payload_hash = payload_hash or UNSIGNED_PAYLOAD  # in case its NoneType
     protocol = config['protocol']
     host = config['host']
     port = config['port']
