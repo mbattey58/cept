@@ -7,17 +7,18 @@ import json
 
 if __name__ == "__main__":
     # read configuration information
-    with open("config/s3-credentials2.json", "r") as f:
+    with open("config/s3-credentials-local2.json", "r") as f:
         credentials = json.loads(f.read())
 
     # payload, empty in this case
     payload_hash = s3.hash('')
 
     # build request
-    request_url, headers = s3.build_request_url(credentials,
-                                                'GET',
-                                                None,
-                                                payload_hash)
+    request_url, headers = s3.build_request_url(
+        config=credentials,
+        req_method='GET',
+        parameters=None,
+        payload_hash=payload_hash)
 
     # send request and print response
     print('Request URL = ' + request_url)

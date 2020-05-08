@@ -237,7 +237,7 @@ def build_request_url(config: S3Config = None,
     # TODO: raise excpetion if any key in 'additional_headers' matches keys
     # in headers dictionary ??
 
-    # payload_hash = payload_hash or UNSIGNED_PAYLOAD  # in case its NoneType
+    payload_hash = payload_hash or UNSIGNED_PAYLOAD  # in case its None
     protocol = config['protocol']
     host = config['host']
     port = config['port']
@@ -281,7 +281,7 @@ def build_request_url(config: S3Config = None,
         lk = [x.lower() for x in xamz]
         signed_headers_list.extend(lk)
         # ensure unique keys for signing purposes
-        signed_headers_list = [x for x in set(signed_headers_list)]
+        signed_headers_list = list(set(signed_headers_list))
 
     signed_headers_list.sort()
 
@@ -329,9 +329,11 @@ def build_request_url(config: S3Config = None,
 
     # build standard headers
     headers = {'Host': host,
-               'Content-length': str(payload_length),
                'X-Amz-Content-SHA256': payload_hash,
                'X-Amz-Date': amzdate}
+
+    if payload_length > 0:
+        headers.update({"Content-Length": str(payload_length)})
 
     if additional_headers:
         headers.update(additional_headers)

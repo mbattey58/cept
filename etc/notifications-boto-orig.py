@@ -21,19 +21,23 @@ def main(bucket, topics, queues, lambdas, events):
             for topic in topics if topic
         ]
 
-    with open("s3-credentials-local.json", "r") as f:
-        credentials = json.loads(f.read())
-    endpoint = credentials['endpoint']
-    access_key = credentials['access_key']
-    secret_key = credentials['secret_key']
+    if queues:
+        data['QueueConfigurations'] = [
+            {
+                'QueueArn': queue,
+                'Events': events
+            }
+            for queue in queues if queue
+        ]
 
-    try:
-        s3_client = boto3.client('s3',
-                                 endpoint_url=endpoint,
-                                 aws_access_key_id=access_key,
-                                 aws_secret_access_key=secret_key
-        s3_client = boto3.s3.
-
+    if lambdas:
+        data['LambdaFunctionConfigurations'] = [
+            {
+                'LambdaFunctionArn': _lambda,
+                'Events': events
+            }
+            for _lambda in lambdas if _lambda
+        ]
 
     if data:
         print(data)

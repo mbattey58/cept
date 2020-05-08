@@ -49,7 +49,7 @@ def print_xml_tree(node, indentation_level=0, filter=lambda t: True):
 if __name__ == "__main__":
 
     # read configuration information
-    with open("config/s3-credentials2.json", "r") as f:
+    with open("config/s3-credentials-local2.json", "r") as f:
         credentials = json.loads(f.read())
 
     protocol = credentials['protocol']
