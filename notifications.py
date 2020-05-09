@@ -20,7 +20,7 @@ import json
 
 if __name__ == "__main__":
     # read configuration information
-    with open("config/s3-credentials2.json", "r") as f:
+    with open("config/s3-credentials-local2.json", "r") as f:
         credentials = json.loads(f.read())
 
     push_endpoint = "http://146.118.66.215:80"
