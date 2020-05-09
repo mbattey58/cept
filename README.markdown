@@ -31,6 +31,15 @@ import xml.etree.ElementTree as ET
 from typing import Dict, Tuple, List
 ```
 
+## Web request logger
+
+The repository includes `etc/log-web-requests.py` which implements a minimal
+webserver which logs received web requests through a configurable logger,
+`logging` module being the defaule, and answers with configurable responses,
+default is an empty `200` (`OK`) status code. Useful to debug _REST_ requests
+and e.g. compare them to the one sent by _boto3_ and similar toolkits.
+
+## References
 
 [Ceph S3 requests](https://access.redhat.com/documentation/en-us/red_hat_ceph_storage/3/html/developer_guide/ceph-object-gateway-s3-api#s3-api-put-bucket-lifecycle)
 

@@ -20,7 +20,8 @@ import hashlib
 import datetime
 import hmac
 import xml.etree.ElementTree as ET
-from typing import Dict, Tuple, List
+import json
+from typing import Dict, Tuple, List, Union
 
 ###############################################################################
 # Private interface
@@ -201,7 +202,7 @@ URL = str
 Request = Tuple[URL, Headers]
 
 
-def build_request_url(config: S3Config = None,
+def build_request_url(config: Union[S3Config, str] = None,
                       req_method: RequestMethod = "GET",
                       parameters: RequestParameters = None,
                       payload_hash: str = UNSIGNED_PAYLOAD,
@@ -219,8 +220,9 @@ def build_request_url(config: S3Config = None,
         secret_key
 
     Args:
-        config (S3Config): dictionary containing endpoint info, access key,
-                           secret key
+        config (Union[S3Config, str]): dictionary containing endpoint info, 
+                                       access key, secret key OR file path
+                                       to json configuration file
         req_method (str): request method e.g. 'GET'
         parameters (RequestParameters): dictionary containing URI request
                                         parameters
@@ -233,16 +235,36 @@ def build_request_url(config: S3Config = None,
                                           are added to the singed list
     Returns:
         Tuple[URL, Headers
+
+    Example of json configuration file in case a string is passed as 'config'
+    parameters:
+
+    {
+        "version"   : "2",
+        "access_key": "00000000000000000000000000000000",
+        "secret_key": "11111111111111111111111111111111",
+        "protocol"  : "http",
+        "host"      : "localhost",
+        "port"      : 8000
+    }
+
+    only version 2 supported.
     """
     # TODO: raise excpetion if any key in 'additional_headers' matches keys
     # in headers dictionary ??
-
+    if type(config) == S3Config:
+        conf = config
+    else:  #interpret as file path
+        with open(config, "r") as f:
+            conf = json.loads(f.read())
+        if conf["version"] != "2":
+            raise ValueError("Only config files version '2' supported")
     payload_hash = payload_hash or UNSIGNED_PAYLOAD  # in case its None
-    protocol = config['protocol']
-    host = config['host']
-    port = config['port']
-    access_key = config['access_key']
-    secret_key = config['secret_key']
+    protocol = conf['protocol']
+    host = conf['host']
+    port = conf['port']
+    access_key = conf['access_key']
+    secret_key = conf['secret_key']
 
     service = 's3'
     method = req_method

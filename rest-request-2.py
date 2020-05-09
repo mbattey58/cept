@@ -1,21 +1,22 @@
 #!/usr/bin/env python3
 import s3v4_rest as s3
 import requests
-import json
+import sys
 
 # ListBucket (empty GET request)
 
 if __name__ == "__main__":
-    # read configuration information
-    with open("config/s3-credentials-local2.json", "r") as f:
-        credentials = json.loads(f.read())
+    if len(sys.argv) != 2:
+        print(f"usage: {sys.argv[0]} <json configuration file>", sys.stderr)
+        sys.exit(-1)
+    config_file = sys.argv[1]
 
     # payload, empty in this case
     payload_hash = s3.hash('')
 
     # build request
     request_url, headers = s3.build_request_url(
-        config=credentials,
+        config=config_file,
         req_method='GET',
         parameters=None,
         payload_hash=payload_hash)

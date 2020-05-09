@@ -18,6 +18,7 @@ class RequestHandler(BaseHTTPRequestHandler):
     count: int = 0  # incremented at each request, cannot be an instance,
                     # cannot be an instance variable because a new instance
                     # is created at each http request received
+            
     log_function: T.Callable = logging.info
 
     def __print_request_info(request, client_address, server):
@@ -48,7 +49,7 @@ class RequestHandler(BaseHTTPRequestHandler):
         self._log("------REQUEST LINE:")
         self._log(self.requestline)
         self._send_default_response("GET")
-   
+
     def do_HEAD(self):
         self._print_text_header
         self._log(self.headers)
