@@ -22,7 +22,7 @@ if __name__ == "__main__":
     # read configuration information
     with open("config/s3-credentials2.json", "r") as f:
         credentials = json.loads(f.read())
-    
+
     push_endpoint = "http://146.118.66.215:80"
 
     parameters = {"Action": "CreateTopic",
@@ -43,7 +43,7 @@ if __name__ == "__main__":
         config=credentials,
         req_method="POST",
         parameters=None,
-        payload_hash=s3.hash(payload), #s3.UNSIGNED_PAYLOAD,
+        payload_hash=s3.hash(payload),  # s3.UNSIGNED_PAYLOAD,
         payload_length=len(payload),  # will be added by requests.post
         uri_path=f"/{bucket_name}",
         additional_headers={"Content-Type":
