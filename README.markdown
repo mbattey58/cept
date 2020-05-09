@@ -17,6 +17,7 @@ In the examples authentication and endpoint information is read from json files 
 }
 
 ```
+
 Tested on Python 3.7 and 3.8.
 
 Dependencies
@@ -34,3 +35,5 @@ from typing import Dict, Tuple, List
 [Ceph S3 requests](https://access.redhat.com/documentation/en-us/red_hat_ceph_storage/3/html/developer_guide/ceph-object-gateway-s3-api#s3-api-put-bucket-lifecycle)
 
 [AWS S3 Requests](https://docs.aws.amazon.com/AmazonS3/latest/API/API_Operations.html)
+
+[Notifications](https://medium.com/analytics-vidhya/automated-data-pipeline-using-ceph-notifications-and-kserving-5e1e9b996661)

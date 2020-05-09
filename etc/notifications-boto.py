@@ -2,26 +2,44 @@
 
 import argparse
 import sys
-
-try:
-    import boto3
-except ImportError:
-    print('Please install boto3 to use this tool')
-    sys.exit(1)
+import boto3
+import json
 
 
-def main(bucket, topics, queues, lambdas, events):
+nc = {
+    'TopicConfigurations': [
+        {
+            'Id': 'ID',
+            'TopicArn': 'TOPIC',
+            'Events': [
+                's3:ObjectCreated:*',
+            ]
+        }
+    ],
+    'QueueConfigurations': [
+        {
+            'Id': 'Q',
+            'QueueArn': 'http://localhost',
+            'Events': [
+                's3:ObjectCreated:*',
+            ]
+        }
+    ]
+}
+
+
+def main(bucket):
     data = {}
-    if topics:
-        data['TopicConfigurations'] = [
-            {
-                'TopicArn': topic,
-                'Events': events
-            }
-            for topic in topics if topic
-        ]
+    # if topics:
+    #     data['TopicConfigurations'] = [
+    #         {
+    #             'TopicArn': topic,
+    #             'Events': events
+    #         }
+    #         for topic in topics if topic
+    #     ]
 
-    with open("s3-credentials-local.json", "r") as f:
+    with open("config/s3-credentials.json", "r") as f:
         credentials = json.loads(f.read())
     endpoint = credentials['endpoint']
     access_key = credentials['access_key']
@@ -31,34 +49,25 @@ def main(bucket, topics, queues, lambdas, events):
         s3_client = boto3.client('s3',
                                  endpoint_url=endpoint,
                                  aws_access_key_id=access_key,
-                                 aws_secret_access_key=secret_key
-        s3_client = boto3.s3.
+                                 aws_secret_access_key=secret_key)
 
+        response = s3_client.put_bucket_notification_configuration(
+            Bucket=bucket,
+            NotificationConfiguration=nc)
+        print(response)
 
-    if data:
-        print(data)
-        s3 = boto3.resource('s3')
-        bucket_notification = s3.BucketNotification(bucket)
-        response = bucket_notification.put(NotificationConfiguration=data)
-        print('Bucket notification updated successfully')
-    else:
-        print('No bucket notifications were specified')
-        sys.exit(1)
+        if data:
+            print(data)
+            s3 = boto3.resource('s3')
+            bucket_notification = s3.BucketNotification(bucket)
+            response = bucket_notification.put(NotificationConfiguration=data)
+            print('Bucket notification updated successfully')
+        else:
+            print('No bucket notifications were specified')
+            sys.exit(1)
+    except Exception as e:
+        print(e)
 
 
 if __name__ == '__main__':
-    parser = argparse.ArgumentParser(
-        description='Manage S3 bucket notifications')
-    parser.add_argument('--bucket', dest='bucket', required=True,
-                        help='the S3 bucket name')
-    parser.add_argument('--topic', dest='topics', nargs='*',
-                        help='SNS topic ARN')
-    parser.add_argument('--queue', dest='queues', nargs='*',
-                        help='SQS queue ARN')
-    parser.add_argument('--lambda', dest='lambdas', nargs='*',
-                        help='Lambda ARN')
-    parser.add_argument('--event', dest='events', nargs='*',
-                        help='an event to respond to')
-    args = parser.parse_args()
-
-    main(args.bucket, args.topics, args.queues, args.lambdas, args.events)
+    main("uv-bucket-3")

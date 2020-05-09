@@ -5,7 +5,7 @@ import logging
 from http.server import BaseHTTPRequestHandler, HTTPServer
 import typing as T
 
-"""Minimal logging http server, prints to stdout
+"""Minimal logging http server, uses 'logging' module
 
    __author__: Ugo Varetto
 
@@ -48,7 +48,7 @@ class RequestHandler(BaseHTTPRequestHandler):
         self._log("------REQUEST LINE:")
         self._log(self.requestline)
         self._send_default_response("GET")
-      
+   
     def do_HEAD(self):
         self._print_text_header
         self._log(self.headers)
@@ -63,6 +63,15 @@ class RequestHandler(BaseHTTPRequestHandler):
         self._log("------REQUEST_BODY")
         self._log(self.rfile.read(int(self.headers['Content-Length'])))
         self._send_default_response("POST")
+
+    def do_PUT(self):
+        self._print_text_header()
+        self._log(self.headers)
+        self._log("------REQUEST LINE:")
+        self._log(self.requestline)
+        self._log("------REQUEST_BODY")
+        self._log(self.rfile.read(int(self.headers['Content-Length'])))
+        self._send_default_response("PUT")
 
 
 if __name__ == "__main__":

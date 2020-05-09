@@ -3,7 +3,7 @@ import s3v4_rest as s3
 import requests
 import json
 
-
+# FROM Ceph docs
 # Notification request
 # POST
 # # Action=CreateTopic
@@ -17,18 +17,19 @@ import json
 # [&Attributes.entry.7.key=OpaqueData&Attributes.entry.7.value=<opaque data>]
 # [&Attributes.entry.8.key=push-endpoint&Attributes.entry.8.value=<endpoint>]
 
+# Medium: https://medium.com/analytics-vidhya/automated-data-pipeline-using-ceph-notifications-and-kserving-5e1e9b996661
+
 
 if __name__ == "__main__":
     # read configuration information
-    with open("config/s3-credentials-local2.json", "r") as f:
+    with open("config/s3-credentials2.json", "r") as f:
         credentials = json.loads(f.read())
 
     push_endpoint = "http://146.118.66.215:80"
 
     parameters = {"Action": "CreateTopic",
                   "Name": "storage",
-                  "push_endpoint": "kafka://mycluster.kafka:9099",
-                  "kafka-ack-level": "broker"}
+                  "push_endpoint": "https://localhost:9099"}
 
     payload = s3.encode_url(parameters)
 
@@ -41,19 +42,23 @@ if __name__ == "__main__":
     #       payload
     request_url, headers = s3.build_request_url(
         config=credentials,
-        req_method="POST",
+        req_method="PUT",
         parameters=None,
         payload_hash=s3.hash(payload),  # s3.UNSIGNED_PAYLOAD,
         payload_length=len(payload),  # will be added by requests.post
-        uri_path=f"/{bucket_name}",
-        additional_headers={"Content-Type":
-                            "application/x-www-form-urlencoded"})
+        uri_path=f"/{bucket_name}")
+        # additional_headers={"Content-Type":
+        #                     "application/x-www-form-urlencoded"})
 
     # send request and print response
     print("Request URL = " + request_url)
     print(headers)
     print(payload)
     r = requests.post(request_url, data=parameters, headers=headers)
+    # NOTE: requests works equally well if instead of payload a dict with
+    #       the required parameter/value configuration is passed directly
+    #       to the 'data' parameter, hashing of payload must always be
+    #       computed however
 
     print("\nResponse")
     print("Response code: %d\n" % r.status_code)
