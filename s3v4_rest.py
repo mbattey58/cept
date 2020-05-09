@@ -332,7 +332,7 @@ def build_request_url(config: S3Config = None,
                'X-Amz-Content-SHA256': payload_hash,
                'X-Amz-Date': amzdate}
 
-    if payload_length > 0:
+    if payload_length:  # client might decide to non send content-length at all
         headers.update({"Content-Length": str(payload_length)})
 
     if additional_headers:
