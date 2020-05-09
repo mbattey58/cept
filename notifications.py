@@ -42,8 +42,8 @@ if __name__ == "__main__":
     #       payload
     request_url, headers = s3.build_request_url(
         config=credentials,
-        req_method="PUT",
-        parameters=None,
+        req_method="POST",
+        parameters=parameters,
         payload_hash=s3.hash(payload),  # s3.UNSIGNED_PAYLOAD,
         payload_length=len(payload),  # will be added by requests.post
         uri_path=f"/{bucket_name}")
