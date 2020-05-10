@@ -8,7 +8,7 @@
 
    __author__     = "Ugo Varetto"
    __license__    = "MIT"
-   __version__    = "0.1"
+   __version__    = "0.2"
    __maintainer__ = "Ugo Varetto"
    __email__      = "ugovaretto@gmail.com"
    __status__     = "Development"
@@ -22,8 +22,7 @@ import hmac
 import xml.etree.ElementTree as ET
 import json
 import requests
-from io import IOBase
-from typing import Dict, Tuple, List, Union, ByteString
+from typing import Dict, Tuple, List, Union, ByteString, Callable
 
 ###############################################################################
 # Private interface
@@ -72,7 +71,9 @@ def _clean_xml_tag(tag):
     return tag if closing_brace_index < 0 else tag[closing_brace_index+1:]
 
 
-def _print_xml_tree(node, indentation_level=0, filter=lambda t: True):
+def _xml_to_text(node: ET,
+                 indentation_level: int = 0,
+                 filter: Callable = lambda t: True):
     """Recursively print xml tree
 
     note: Python as a limit on the recursion level it can handle,
@@ -88,10 +89,12 @@ def _print_xml_tree(node, indentation_level=0, filter=lambda t: True):
     """
     BLANKS = 2
     indent = indentation_level * BLANKS
+    text = ""
     if filter(node.tag):
-        print(" "*indent + f"{_clean_xml_tag(node.tag)}: {node.text}")
+        text += " "*indent + f"{_clean_xml_tag(node.tag)}: {node.text}\n"
     for child in node:
-        _print_xml_tree(child, indentation_level + 1)
+        text += _xml_to_text(child, indentation_level + 1)
+    return text
 
 
 _XML_NAMESPACE_PREFIX = "{http://s3.amazonaws.com/doc/2006-03-01/}"
@@ -167,18 +170,18 @@ def get_tag_id(response_header: Dict[str, str]):
     return response_header['ETag']
 
 
-def print_xml(text: str):
-    """Print XML tree.
+def xml_to_text(text: str):
+    """Print XML tree to text
 
     Args:
         text (str): textual representation of XML tree
     Returns:
-        None
+        str: indented textual representation of XML tag hierarchy
     """
     if not text:
-        return
+        return ""
     tree = ET.fromstring(text)
-    _print_xml_tree(tree)
+    return _xml_to_text(tree)
 
 
 def hash(data):
@@ -457,38 +460,34 @@ def send_s3_request(config: Union[S3Config, str] = None,
     if key_name and not bucket_name:
         raise ValueError("ERROR - empty bucket, \
                          key without bucket not supported")
-    
-    data = None
-    response = None
-    try:
-        if payload and payload_is_file_name:
-            data = open(payload, "rb")
-        else:
-            data = payload
 
-        uri_path = "/" + \
-                   (f"{bucket_name}/" if bucket_name else "") + \
-                   (f"{key_name}/" if key_name else "") + \
-                   (f"{action}" if action else "")
+    uri_path = "/" + \
+               (f"{bucket_name}/" if bucket_name else "") + \
+               (f"{key_name}/" if key_name else "") + \
+               (f"{action}" if action else "")
 
-        # build request #1: text in body and payload hashing
-        request_url, headers = build_request_url(
-            config=config,
-            req_method=req_method,
-            parameters=parameters,
-            payload_hash=payload_hash,
-            payload_length=content_length,
-            uri_path=uri_path,
-            additional_headers=additional_headers
-        )
+    if payload and payload_is_file_name:
+        content_length = 0  # will be created by requests when uploading file
+
+    # build request #1: text in body and payload hashing
+    request_url, headers = build_request_url(
+        config=config,
+        req_method=req_method,
+        parameters=parameters,
+        payload_hash=payload_hash,
+        payload_length=content_length,
+        uri_path=uri_path,
+        additional_headers=additional_headers
+    )
+
+    if payload and payload_is_file_name:
+        f = {'upload_file': open(payload, 'rb')}
         response = _REQUESTS_METHODS[req_method.lower()](request_url,
-                                                         data=data,
+                                                         files=f,
                                                          headers=headers)
-
-    except Exception as e:
-        raise e
-    finally:
-        if isinstance(data, IOBase):
-            data.close()
+    else:
+        response = _REQUESTS_METHODS[req_method.lower()](request_url,
+                                                         data=payload,
+                                                         headers=headers)
 
     return response

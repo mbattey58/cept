@@ -40,7 +40,7 @@ if __name__ == "__main__":
         print(r.text)
         # parse and print XML response
         print("\n")
-        s3.print_xml(r.text)
+        print(s3.xml_to_text(r.text))
         print("\n")
 
     # build request #2: binary file read from filesytem, no hashing
@@ -64,7 +64,7 @@ if __name__ == "__main__":
         print(r.text)
         # parse and print XML response
         print("\n")
-        s3.print_xml(r.text)
+        print(s3.xml_to_text(r.text))
         print("\n")
 
     print(r.headers)

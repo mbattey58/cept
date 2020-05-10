@@ -12,7 +12,7 @@ import typing as T
    Usage: ./log-web-requests.py <port>
 
    HTTPServer will be printing out a 'localhost - - [date] "Request" status -'
-   at each request in addition to the data logged by the RequestHandler class 
+   at each request in addition to the data logged by the RequestHandler class
 """
 
 
@@ -37,7 +37,7 @@ class RequestHandler(BaseHTTPRequestHandler):
     def _print_text_header(self):
         headers_text = ""
         for (k, v) in self.headers.items():
-            headers_text += f'{k}: {v}'
+            headers_text += f'{k}: {v}\n'
         return headers_text
 
     def _print_reqline_and_headers(self):
@@ -64,14 +64,18 @@ class RequestHandler(BaseHTTPRequestHandler):
         self._send_default_response("HEAD")
 
     def do_POST(self):
+        from array import array
+        a = array('b', self.rfile.read(int(self.headers['Content-Length'])))
         log_msg = "------REQUEST_BODY" + "\n" + \
-                  self.rfile.read(int(self.headers['Content-Length']))
+                  a.tostring()      
         self._log(self._print_reqline_and_headers() + "\n" + log_msg)
         self._send_default_response("POST")
 
     def do_PUT(self):
+        from array import array
+        a = array('b', self.rfile.read(int(self.headers['Content-Length'])))
         log_msg = "------REQUEST_BODY" + "\n" + \
-                  self.rfile.read(int(self.headers['Content-Length']))
+                  a.tostring()        
         self._log(self._print_reqline_and_headers() + "\n" + log_msg)
         self._send_default_response("PUT")
 

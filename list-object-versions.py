@@ -3,7 +3,7 @@ import s3v4_rest as s3
 import requests
 import sys
 
-# ListObjects (GET/bucket_name request)
+# ListObjectVersions GET/bucket_name?versions request)
 
 if __name__ == "__main__":
     if len(sys.argv) != 3:
@@ -15,8 +15,7 @@ if __name__ == "__main__":
     bucket_name = "uv-bucket-3"
     r = s3.send_s3_request(config=config_file,
                            req_method='GET',
-                           parameters={"list-type": "2"},  #WORKS with Ceph
-                           payload=None,
+                           parameters={"versions": ''},
                            sign_payload=False,
                            payload_is_file_name=False,
                            bucket_name=bucket_name,

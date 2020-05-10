@@ -66,5 +66,5 @@ if __name__ == "__main__":
         print(r.text)
         # parse and print XML response
         print("\n")
-        s3.print_xml(r.text)
+        print(s3.xml_to_text(r.text))
         print("\n")
