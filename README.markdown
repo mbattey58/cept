@@ -2,7 +2,7 @@
 
 Various examples of how to send REST requests to S3 using only raw URLs + HTTP headers.
 
-`s3v4_rest.py` is a module implementing a generic interface to `S3/Ceph`, taking care of building the signed request header and generating the REST URLs, MIT licensed. PEP8, static typing not fully applied everywhere, wont' pass `mypy` validation.
+`s3v4_rest.py` is a module implementing a generic interface to `S3/Ceph`, taking care of building the signed request header and generating the REST URLs, MIT licensed. PEP8 compliant, static typing not fully applied everywhere, wont' pass `mypy` validation.
 
 In the examples authentication and endpoint information is read from json files with the following format:
 
@@ -34,11 +34,13 @@ from typing import Dict, Tuple, List, Union, ByteString, Callable
 
 ## S3 REST client
 
-*s3-rest.py* is a generic S3 REST client which allows to send request directly
-from the commend line.
+*s3-rest.py* is a generic S3 REST client which allows to send requests directly
+from the command line.
 Launch without parameters to see options.
 Credentials are read from a configuration files wih the same structure as the
 one described above.
+Request content can be both passed on the command line or read from file.
+Signing is currently not supported for payloads read from file.
 
 ### Examples
 
@@ -52,7 +54,7 @@ List objects with version information.
 
 ```shell
 s3-rest.py --method=get --config_file=config/s3-credentials2.json \
-                   --bucket=uv-bucket-3 --parameters="versions=''
+           --bucket=uv-bucket-3 --parameters="versions=''
 ```
 
 ## Web request logger
@@ -62,6 +64,14 @@ webserver which logs received web requests through a configurable logger,
 `logging` module being the defaule, and answers with configurable responses,
 default is an empty `200` (`OK`) status code. Useful to debug _REST_ requests
 and e.g. compare them to the one sent by _boto3_ and similar toolkits.
+
+## Status
+
+Under development, will add more examples covering tagging and advanced features;
+will also add an S3 web gateway proxy to filter, sign, log and change requests and
+reponses on the fly.
+
+Notifications have not been properly tested.
 
 ## References
 
