@@ -2,7 +2,9 @@
 
 Various examples of how to send REST requests to S3 using only raw URLs + HTTP headers.
 
-`s3v4_rest.py` is a module implementing a generic interface to `S3/Ceph`, taking care of building the signed request header and generating the REST URLs, MIT licensed. PEP8 compliant, static typing not fully applied everywhere, wont' pass `mypy` validation.
+`s3v4_rest.py` is a module implementing a generic interface to `S3/Ceph`,
+taking care of building the signed request header and generating the REST URLs,
+MIT licensed. PEP8 compliant, static typing not fully applied everywhere, wont' pass `mypy` validation.
 
 In the examples authentication and endpoint information is read from json files with the following format:
 
@@ -30,6 +32,50 @@ import xml.etree.ElementTree as ET
 import json
 import requests
 from typing import Dict, Tuple, List, Union, ByteString, Callable
+```
+
+There are two functions you can use to send requests, one takes care of
+configuring everything and sending the request, the other only returns
+headers and URL and required the client code to send the request to the
+server; this last method is required when dealing with multi-stage requests
+like multi-part uploads (example code provided).
+
+E.g. list objects version 2:
+
+```python
+#!/usr/bin/env python3
+import s3v4_rest as s3
+import requests
+import sys
+
+# ListObjects (GET/bucket_name request)
+
+if __name__ == "__main__":
+    if len(sys.argv) != 3:
+        print(f"usage: {sys.argv[0]} <json configuration file> <bucket name>",
+              file=sys.stderr)
+        sys.exit(-1)
+    config_file = sys.argv[1]
+    bucket_name = sys.argv[2]
+    bucket_name = "uv-bucket-3"
+    r = s3.send_s3_request(config=config_file,
+                           req_method='GET',
+                           parameters={"list-type": "2"},  #WORKS with Ceph
+                           payload=None,
+                           sign_payload=False,
+                           payload_is_file_name=False,
+                           bucket_name=bucket_name,
+                           key_name=None,
+                           action=None)
+    print('\nResponse')
+    print('Response code: %d\n' % r.status_code)
+    print(r.text)
+
+    # parse and print XML response
+    print("\n")
+    print(s3.xml_to_text(r.text))
+    print("\n")
+
 ```
 
 ## S3 REST client
