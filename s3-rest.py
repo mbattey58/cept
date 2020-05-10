@@ -40,6 +40,9 @@
     additional headers can be passes as well on the command line as ';'
     separated key=value pairs
 
+    parameters and headers must *always* include key=value pairs, use "key=''"
+    for missing values
+
     reponse status code, headers, textual and parsed xml body is printed
     to either standard output (200 status) or standard error (non 200 status)
 """

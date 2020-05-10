@@ -32,6 +32,29 @@ import requests
 from typing import Dict, Tuple, List, Union, ByteString, Callable
 ```
 
+## S3 REST client
+
+*s3-rest.py* is a generic S3 REST client which allows to send request directly
+from the commend line.
+Launch without parameters to see options.
+Credentials are read from a configuration files wih the same structure as the
+one described above.
+
+### Examples
+
+Retrieve bucket list.
+
+```shell
+s3-rest.py --method=get  --config_file=config/s3-credentials2.json
+```
+
+List objects with version information.
+
+```shell
+s3-rest.py --method=get --config_file=config/s3-credentials2.json \
+                   --bucket=uv-bucket-3 --parameters="versions=''
+```
+
 ## Web request logger
 
 The repository includes `etc/log-web-requests.py` which implements a minimal
