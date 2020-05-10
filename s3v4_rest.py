@@ -21,7 +21,9 @@ import datetime
 import hmac
 import xml.etree.ElementTree as ET
 import json
-from typing import Dict, Tuple, List, Union
+import requests
+from io import IOBase
+from typing import Dict, Tuple, List, Union, ByteString
 
 ###############################################################################
 # Private interface
@@ -220,7 +222,7 @@ def build_request_url(config: Union[S3Config, str] = None,
         secret_key
 
     Args:
-        config (Union[S3Config, str]): dictionary containing endpoint info, 
+        config (Union[S3Config, str]): dictionary containing endpoint info,
                                        access key, secret key OR file path
                                        to json configuration file
         req_method (str): request method e.g. 'GET'
@@ -228,19 +230,19 @@ def build_request_url(config: Union[S3Config, str] = None,
                                         parameters
         payload_hash (str): sha256-hash of payload, use 'UNSIGNED_PAYLOAD'
                             for non hashed payload
-        payload_length (int): length of payload
+        payload_length (int): length of payload, in case of 'None' no
+                              'Content-Length" header is added
         uri_path (str): path appended after protocol:hostname:port
-        additiona_headers (Dic[str,str]): additional custom header, the
+        additiona_headers (Dic[str,str]): additional custom headers, the
                                           ones starting with 'x-amz-'
                                           are added to the singed list
     Returns:
-        Tuple[URL, Headers
+        Tuple[URL, Headers]
 
     Example of json configuration file in case a string is passed as 'config'
     parameters:
 
     {
-        "version"   : "2",
         "access_key": "00000000000000000000000000000000",
         "secret_key": "11111111111111111111111111111111",
         "protocol"  : "http",
@@ -248,17 +250,20 @@ def build_request_url(config: Union[S3Config, str] = None,
         "port"      : 8000
     }
 
-    only version 2 supported.
     """
     # TODO: raise excpetion if any key in 'additional_headers' matches keys
     # in headers dictionary ??
     if type(config) == S3Config:
         conf = config
-    else:  #interpret as file path
+    else:  # interpret as file path
         with open(config, "r") as f:
             conf = json.loads(f.read())
-        if conf["version"] != "2":
-            raise ValueError("Only config files version '2' supported")
+
+    req_method = req_method.upper()
+    # no explicit rasing of exceptions because the run-time will already
+    # raise the relevant ones should something fail e.g. in case keys
+    # are not found in config dictionary a KeyError exception is thrown.
+
     payload_hash = payload_hash or UNSIGNED_PAYLOAD  # in case its None
     protocol = conf['protocol']
     host = conf['host']
@@ -368,3 +373,122 @@ def build_request_url(config: Union[S3Config, str] = None,
         request_url += '?' + canonical_querystring
 
     return request_url, headers
+
+
+_REQUESTS_METHODS = {"get": requests.get,
+                     "put": requests.put,
+                     "post": requests.post,
+                     "delete": requests.delete}
+
+
+def send_s3_request(config: Union[S3Config, str] = None,
+                    req_method: RequestMethod = "GET",
+                    parameters: RequestParameters = None,
+                    payload: Union[str, ByteString] = None,
+                    payload_is_file_name: bool = False,
+                    sign_payload: bool = False,
+                    bucket_name: str = None,
+                    key_name: str = None,
+                    action: str = None,
+                    additional_headers: Dict[str, str] = None) \
+                    -> requests.Request:
+
+    """Send REST request with headers signed according to S3v4 specification
+
+    S3Config type: Dict[str, str] with keys:
+        protocol
+        host
+        port
+        access_key
+        secret_key
+
+    Args:
+        config (Union[S3Config, str]): dictionary containing endpoint info,
+                                       access key, secret key OR file path
+                                       to json configuration file
+        req_method (str): request method e.g. 'GET'
+        parameters (RequestParameters): dictionary containing URI request
+                                        parameters 
+        payload (str or ByteString): string or bytes (e.g. array.to_bytes())
+                                     if 'payload_is_file_name' equals 'True'
+                                     then this parameter is interpreted
+                                     as a filepath, and the file descriptor
+                                     returned by 'open' will be passed to the
+                                     'data' paramter of the
+                                     requests.* functions
+        sign_payload (bool): sign payload, not currently supported when
+                             filepath specified
+        bucket_name (str): name of bucket appended to URI: /bucket_name
+        key_name (str): name of key appended to URI :/bucket_name/key_name
+        action (str): name of actional appended to URI: 
+                      /bucket_name/key_name/action
+        additiona_headers (Dic[str,str]): additional custom headers, the
+                                          ones starting with 'x-amz-'
+                                          are added to the singed list
+    Returns:
+        requests.Response
+
+    Example of json configuration file in case a string is passed as 'config'
+    parameters:
+
+    {
+        "access_key": "00000000000000000000000000000000",
+        "secret_key": "11111111111111111111111111111111",
+        "protocol"  : "http",
+        "host"      : "localhost",
+        "port"      : 8000
+    }
+
+    """
+    # payload, empty in this case
+    payload_hash = None
+    sign_payload = sign_payload if payload else False
+    if sign_payload:
+        if payload_is_file_name:
+            raise NotImplementedError(
+                    "Signing of file content not supported yet")
+        else:
+            payload_hash = hash(payload)
+
+    if req_method.lower() not in _REQUESTS_METHODS.keys():
+        raise ValueError(f"ERROR - invalid request method: {req_method}")
+    content_length = len(payload)
+
+    if key_name and not bucket_name:
+        raise ValueError("ERROR - empty bucket, \
+                         key without bucket not supported")
+
+    data = None
+    response = None
+    try:
+        if payload and payload_is_file_name:
+            data = open(payload, "rb")
+        else:
+            data = payload
+
+        uri_path = "/" + \
+                   (f"{bucket_name}/" if bucket_name else "") + \
+                   (f"{key_name}/" if key_name else "") + \
+                   (f"{action}" if action else "")
+
+        # build request #1: text in body and payload hashing
+        request_url, headers = build_request_url(
+            config=config,
+            req_method=req_method,
+            parameters=parameters,
+            payload_hash=payload_hash,
+            payload_length=content_length,
+            uri_path=uri_path,
+            additional_headers=additional_headers
+        )
+        response = _REQUESTS_METHODS[req_method.lower()](request_url,
+                                                         data=data,
+                                                         headers=headers)
+
+    except Exception as e:
+        raise e
+    finally:
+        if isinstance(data, IOBase):
+            data.close()
+
+    return response

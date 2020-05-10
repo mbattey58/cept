@@ -7,7 +7,8 @@ import sys
 
 if __name__ == "__main__":
     if len(sys.argv) != 2:
-        print(f"usage: {sys.argv[0]} <json configuration file>", sys.stderr)
+        print(f"usage: {sys.argv[0]} <json configuration file>",
+              file=sys.stderr)
         sys.exit(-1)
     config_file = sys.argv[1]
 
