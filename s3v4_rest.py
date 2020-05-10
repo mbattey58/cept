@@ -408,7 +408,7 @@ def send_s3_request(config: Union[S3Config, str] = None,
                                        to json configuration file
         req_method (str): request method e.g. 'GET'
         parameters (RequestParameters): dictionary containing URI request
-                                        parameters 
+                                        parameters
         payload (str or ByteString): string or bytes (e.g. array.to_bytes())
                                      if 'payload_is_file_name' equals 'True'
                                      then this parameter is interpreted
