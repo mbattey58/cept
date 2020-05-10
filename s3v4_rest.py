@@ -452,12 +452,12 @@ def send_s3_request(config: Union[S3Config, str] = None,
 
     if req_method.lower() not in _REQUESTS_METHODS.keys():
         raise ValueError(f"ERROR - invalid request method: {req_method}")
-    content_length = len(payload)
+    content_length = len(payload) if payload else 0
 
     if key_name and not bucket_name:
         raise ValueError("ERROR - empty bucket, \
                          key without bucket not supported")
-
+    
     data = None
     response = None
     try:

@@ -6,11 +6,12 @@ import sys
 # ListBucket (empty GET request)
 
 if __name__ == "__main__":
-    if len(sys.argv) != 2:
-        print(f"usage: {sys.argv[0]} <json configuration file>",
+    if len(sys.argv) != 3:
+        print(f"usage: {sys.argv[0]} <json configuration file> <bucket name>",
               file=sys.stderr)
         sys.exit(-1)
     config_file = sys.argv[1]
+    bucket_name = sys.argv[2]
     bucket_name = "uv-bucket-3"
     r = s3.send_s3_request(config=config_file,
                            req_method='GET',
@@ -21,7 +22,7 @@ if __name__ == "__main__":
                            bucket_name=bucket_name,
                            key_name=None,
                            action=None)
-                           
+                  
     print('\nResponse')
     print('Response code: %d\n' % r.status_code)
     print(r.text)
