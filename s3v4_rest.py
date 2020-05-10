@@ -423,7 +423,7 @@ def send_s3_request(config: Union[S3Config, str] = None,
                              filepath specified
         bucket_name (str): name of bucket appended to URI: /bucket_name
         key_name (str): name of key appended to URI :/bucket_name/key_name
-        action (str): name of actional appended to URI: 
+        action (str): name of actional appended to URI:
                       /bucket_name/key_name/action
         additiona_headers (Dic[str,str]): additional custom headers, the
                                           ones starting with 'x-amz-'
