@@ -93,14 +93,23 @@ Signing is currently not supported for payloads read from file.
 Retrieve bucket list.
 
 ```shell
-s3-rest.py --method=get  --config_file=config/s3-credentials2.json
+s3-rest.py --method=get --config_file=config/s3-credentials2.json
 ```
 
 List objects with version information.
 
 ```shell
 s3-rest.py --method=get --config_file=config/s3-credentials2.json \
-           --bucket=uv-bucket-3 --parameters="versions=''
+           --bucket=uv-bucket-3 --parameters="versions=''"
+```
+
+Download object to file, notice how key name has to be specified as an
+action according to S3 standard.
+`GET` is the default method and does not have to explicitly specified.
+
+```shell
+./s3-rest.py -c config/s3-credentials2.json -b uv-bucket-3 \
+             -a tmp-blob1 -n tmp/tmp-download
 ```
 
 ## Web request logger
