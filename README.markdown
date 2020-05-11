@@ -96,21 +96,46 @@ Retrieve bucket list.
 s3-rest.py --method=get --config_file=config/s3-credentials2.json
 ```
 
-List objects with version information, using ListObjects
+List objects with version information.
 
 ```shell
 s3-rest.py --method=get --config_file=config/s3-credentials2.json \
            --bucket=uv-bucket-3 --parameters="versions=''"
 ```
 
-Download object to file, notice how key name has to be specified as an
-action according to S3 standard.
-`GET` is the default method and does not have to explicitly specified.
-Note how the key name has to be specified as an action.
+Copy content of file into object. Notice use of "-a" (action) to specify
+key name.
+
+```shell
+./s3-rest.py -m put -p tmp/tmp-blob3 -f -b uv-bucket-3 \
+             -a tmp-blobX3 -c config/s3-credentials2.json
+```
+
+Download object to file, key name as action.
+`GET` is the default method and does not have to be explicitly specified.
 
 ```shell
 ./s3-rest.py -c config/s3-credentials2.json -b uv-bucket-3 \
              -a tmp-blob1 -n tmp/tmp-download
+```
+
+Put object with metadata. Action = key name
+
+```shell
+./s3-rest.py  -m put -b uv-bucket-3 -a "some_text" \
+              -c config/s3-credentials2.json -p "hello world" \
+              -e "x-amz-meta-mymeta=My first metadata"
+```
+
+Retrieve metadata,  `x-amz-meta-`_metadata_lowecase_. Action = key name
+
+```shell
+./s3-rest.py -m head -b uv-bucket-3 -a some_text -c config/s3-credentials2.json
+
+Response headers: {'Content-Length': '11', ...,
+                   'x-amz-meta-mymeta': 'My first metadata', <==
+                   'x-amz-request-id': ...
+                  }
 ```
 
 ## Web request logger

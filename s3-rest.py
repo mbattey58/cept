@@ -79,11 +79,11 @@ if __name__ == "__main__":
                         '--payload_is_file', dest='payload_is_file',
                         required=False,
                         help='if true "payload" is interpreted as a file name',
-                        nargs='?', type=bool, default=True)
+                        nargs='?', type=bool, default=False)
     parser.add_argument('-s',
                         '--sign_payload', dest='sign_payload', required=False,
                         help='if true "payload" is interpreted as a file name',
-                        nargs='?', type=bool, default=True)
+                        nargs='?', type=bool, default=False)
     parser.add_argument('-t', '--parameters', dest='parameters',
                         required=False, type=str,
                         help="';' separated list of key=value pairs")
@@ -106,11 +106,22 @@ if __name__ == "__main__":
     headers = None
     if args.headers:
         headers = dict([x.split("=") for x in args.headers.split(";")])
+
+    # if parameter substitution is required and payload is file name
+    # then payload must be read from file, substitutions applied and
+    # payload_is_file set to False, since substituted content needs to
+    # be passed instead
+    payload_is_file = args.payload_is_file
     payload = args.payload
-    if args.payload and args.subst_params:
-        subst_dict = dict([x.split("=") for x in args.subst_params.split(";")])
-        for (k, v) in subst_dict.items():
-            payload = payload.replace(k, v)
+    if args.payload and args.payload_is_file and args.substitute_parameters:
+        with open(args.payload) as f:
+            payload = f.read()
+            subst_dict = dict([x.split("=")
+                               for x in args.subst_params.split(";")])
+            for (k, v) in subst_dict.items():
+                payload = payload.replace(k, v)
+        payload_is_file = False
+
     start = time.perf_counter()
     response = s3.send_s3_request(
                            config=args.config_file,
@@ -118,7 +129,7 @@ if __name__ == "__main__":
                            parameters=params,
                            payload=payload,
                            sign_payload=args.sign_payload,
-                           payload_is_file_name=args.payload_is_file,
+                           payload_is_file_name=payload_is_file,
                            bucket_name=args.bucket,
                            key_name=args.key,
                            action=args.action,
@@ -135,6 +146,6 @@ if __name__ == "__main__":
         print(f"Response body: {response.text}", file=outfile)
         print(s3.xml_to_text(response.text))
     else:
-        if not args.content_file and response.text:
+        if response.text:
            print(f"Response body: {response.text}", file=outfile)
            print(s3.xml_to_text(response.text))

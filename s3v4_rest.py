@@ -381,7 +381,8 @@ def build_request_url(config: Union[S3Config, str] = None,
 _REQUESTS_METHODS = {"get": requests.get,
                      "put": requests.put,
                      "post": requests.post,
-                     "delete": requests.delete}
+                     "delete": requests.delete,
+                     "head": requests.head}
 
 
 def send_s3_request(config: Union[S3Config, str] = None,
@@ -446,7 +447,6 @@ def send_s3_request(config: Union[S3Config, str] = None,
     """
     # payload, empty in this case
     payload_hash = None
-    sign_payload = sign_payload if payload else False
     if sign_payload:
         if payload_is_file_name:
             raise NotImplementedError(
