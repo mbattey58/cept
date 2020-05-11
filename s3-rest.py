@@ -97,12 +97,16 @@ if __name__ == "__main__":
                         help="';' separated list of key=value pairs, " +
                              "substitutes key with value in request body",
                         required=False)
+    parser.add_argument('-o', '--output', type=str, dest='output_type',
+                        help="content output type: xml | text | binary",
+                        default="xml", required=False)
 
     args = parser.parse_args()
 
     params = None
     if args.parameters:
         params = dict([x.split("=") for x in args.parameters.split(";")])
+        print(params)
     headers = None
     if args.headers:
         headers = dict([x.split("=") for x in args.headers.split(";")])
@@ -141,11 +145,15 @@ if __name__ == "__main__":
     print(f"Response status: {response.status_code}", file=outfile)
     print(f"Response headers: {response.headers}", file=outfile)
 
-    # only print content text when not writing to file
+    # only print content text when not writing to file and when not binary
+    if args.output_type.lower() == 'binary':
+        sys.exit(0)
+
     if response.text and not args.content_file and response.status_code == 200:
         print(f"Response body: {response.text}", file=outfile)
-        print(s3.xml_to_text(response.text))
+        if args.output_type.lower() == 'xml':
+            print(s3.xml_to_text(response.text))
     else:
         if response.text:
-           print(f"Response body: {response.text}", file=outfile)
-           print(s3.xml_to_text(response.text))
+            print(f"Response body: {response.text}", file=outfile)
+            print(s3.xml_to_text(response.text))

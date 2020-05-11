@@ -39,7 +39,7 @@ def main(bucket):
     #         for topic in topics if topic
     #     ]
 
-    with open("config/s3-credentials.json", "r") as f:
+    with open("config/s3-credentials-local.json", "r") as f:
         credentials = json.loads(f.read())
     endpoint = credentials['endpoint']
     access_key = credentials['access_key']

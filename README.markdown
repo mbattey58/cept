@@ -100,7 +100,7 @@ List objects with version information.
 
 ```shell
 s3-rest.py --method=get --config_file=config/s3-credentials2.json \
-           --bucket=uv-bucket-3 --parameters="versions=''"
+           --bucket=uv-bucket-3 --parameters="versions="
 ```
 
 Copy content of file into object. Notice use of "-a" (action) to specify

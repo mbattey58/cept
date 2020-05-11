@@ -470,11 +470,16 @@ def send_s3_request(config: Union[S3Config, str] = None,
     if payload and payload_is_file_name:
         content_length = 0  # will be created by requests when uploading file
 
-    # build request #1: text in body and payload hashing
+    # in case of url parameters, method == POST and empy payload, parameters
+    # are urlencoded and passed in bod automatically by requests and therefore
+    # request is built with empty body and empty uri
+    req_parameters = parameters
+    if not payload and req_method.lower() == 'post' and parameters:
+        req_parameters = None
     request_url, headers = build_request_url(
         config=config,
         req_method=req_method,
-        parameters=parameters,
+        parameters=req_parameters,
         payload_hash=payload_hash,
         payload_length=content_length,
         uri_path=uri_path,
@@ -487,8 +492,11 @@ def send_s3_request(config: Union[S3Config, str] = None,
                                                          files=f,
                                                          headers=headers)
     else:
+        data = payload
+        if parameters and not payload and req_method.lower() == 'post':
+            data = parameters
         response = _REQUESTS_METHODS[req_method.lower()](request_url,
-                                                         data=payload,
+                                                         data=data,
                                                          headers=headers)
 
     if content_file and response.status_code == 200 and response.content:

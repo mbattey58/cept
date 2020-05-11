@@ -67,7 +67,7 @@ class RequestHandler(BaseHTTPRequestHandler):
         from array import array
         a = array('b', self.rfile.read(int(self.headers['Content-Length'])))
         log_msg = "------REQUEST_BODY" + "\n" + \
-                  a.tostring()      
+                  f"{a.tostring()}"
         self._log(self._print_reqline_and_headers() + "\n" + log_msg)
         self._send_default_response("POST")
 
@@ -75,7 +75,7 @@ class RequestHandler(BaseHTTPRequestHandler):
         from array import array
         a = array('b', self.rfile.read(int(self.headers['Content-Length'])))
         log_msg = "------REQUEST_BODY" + "\n" + \
-                  a.tostring()        
+                 f"{a.tostring()}"
         self._log(self._print_reqline_and_headers() + "\n" + log_msg)
         self._send_default_response("PUT")
 
