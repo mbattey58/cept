@@ -53,6 +53,7 @@ import s3v4_rest as s3
 import requests
 import sys
 import argparse
+import time
 
 
 if __name__ == "__main__":
@@ -110,7 +111,7 @@ if __name__ == "__main__":
         subst_dict = dict([x.split("=") for x in args.subst_params.split(";")])
         for (k, v) in subst_dict.items():
             payload = payload.replace(k, v)
-
+    start = time.perf_counter()
     response = s3.send_s3_request(
                            config=args.config_file,
                            req_method=args.method,
@@ -123,7 +124,8 @@ if __name__ == "__main__":
                            action=args.action,
                            additional_headers=headers,
                            content_file=args.content_file)
-
+    end = time.perf_counter()
+    print("Elapsed time: " + str(end - start) + " (s)")
     outfile = sys.stdout if response.status_code == 200 else sys.stderr
     print(f"Response status: {response.status_code}", file=outfile)
     print(f"Response headers: {response.headers}", file=outfile)
@@ -132,3 +134,7 @@ if __name__ == "__main__":
     if response.text and not args.content_file and response.status_code == 200:
         print(f"Response body: {response.text}", file=outfile)
         print(s3.xml_to_text(response.text))
+    else:
+        if not args.content_file and response.text:
+           print(f"Response body: {response.text}", file=outfile)
+           print(s3.xml_to_text(response.text))

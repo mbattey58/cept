@@ -96,7 +96,7 @@ Retrieve bucket list.
 s3-rest.py --method=get --config_file=config/s3-credentials2.json
 ```
 
-List objects with version information.
+List objects with version information, using ListObjects
 
 ```shell
 s3-rest.py --method=get --config_file=config/s3-credentials2.json \
@@ -106,6 +106,7 @@ s3-rest.py --method=get --config_file=config/s3-credentials2.json \
 Download object to file, notice how key name has to be specified as an
 action according to S3 standard.
 `GET` is the default method and does not have to explicitly specified.
+Note how the key name has to be specified as an action.
 
 ```shell
 ./s3-rest.py -c config/s3-credentials2.json -b uv-bucket-3 \
@@ -116,7 +117,7 @@ action according to S3 standard.
 
 The repository includes `etc/log-web-requests.py` which implements a minimal
 webserver which logs received web requests through a configurable logger,
-`logging` module being the defaule, and answers with configurable responses,
+`logging` module being the default, and answers with configurable responses,
 default is an empty `200` (`OK`) status code. Useful to debug _REST_ requests
 and e.g. compare them to the one sent by _boto3_ and similar toolkits.
 
