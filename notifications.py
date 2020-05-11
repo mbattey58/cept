@@ -29,7 +29,8 @@ if __name__ == "__main__":
 
     parameters = {"Action": "CreateTopic",
                   "Name": "storage",
-                  "push_endpoint": "https://localhost:9099"}
+                  "push-endpoint": "https://146.118.66.215",
+                  "verify-ssl": "false"}
 
     payload = s3.encode_url(parameters)
 
@@ -40,10 +41,11 @@ if __name__ == "__main__":
     #       request automatically when data=Dict[str, str]
     #       POST urlencoded data is the urlencoded url which is sent as
     #       payload
+    payload = ""
     request_url, headers = s3.build_request_url(
         config=credentials,
         req_method="POST",
-        parameters=parameters,
+        parameters=None,
         payload_hash=s3.hash(payload),  # s3.UNSIGNED_PAYLOAD,
         payload_length=len(payload),  # will be added by requests.post
         uri_path=f"/{bucket_name}")

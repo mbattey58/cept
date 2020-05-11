@@ -199,7 +199,7 @@ def hash(data):
 
 
 # Type declarations
-S3Config = Dict[str, str]
+S3Config = Dict
 RequestMethod = str
 RequestParameters = Dict[str, str]
 Headers = Dict[str, str]
@@ -256,7 +256,7 @@ def build_request_url(config: Union[S3Config, str] = None,
     """
     # TODO: raise excpetion if any key in 'additional_headers' matches keys
     # in headers dictionary ??
-    if type(config) == S3Config:
+    if type(config) == dict:
         conf = config
     else:  # interpret as file path
         with open(config, "r") as f:
@@ -475,7 +475,7 @@ def send_s3_request(config: Union[S3Config, str] = None,
     # request is built with empty body and empty uri
     req_parameters = parameters
     if not payload and req_method.lower() == 'post' and parameters:
-        req_parameters = None
+        req_parameters = {"": ""}
     request_url, headers = build_request_url(
         config=config,
         req_method=req_method,

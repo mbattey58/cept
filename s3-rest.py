@@ -77,9 +77,9 @@ if __name__ == "__main__":
                         help='request body', type=str)
     parser.add_argument('-f',
                         '--payload_is_file', dest='payload_is_file',
-                        required=False,
+                        required=False, type=bool, const=True,
                         help='if true "payload" is interpreted as a file name',
-                        nargs='?', type=bool, default=False)
+                        nargs='?', default=False)
     parser.add_argument('-s',
                         '--sign_payload', dest='sign_payload', required=False,
                         help='if true "payload" is interpreted as a file name',
@@ -106,7 +106,6 @@ if __name__ == "__main__":
     params = None
     if args.parameters:
         params = dict([x.split("=") for x in args.parameters.split(";")])
-        print(params)
     headers = None
     if args.headers:
         headers = dict([x.split("=") for x in args.headers.split(";")])
@@ -117,9 +116,10 @@ if __name__ == "__main__":
     # be passed instead
     payload_is_file = args.payload_is_file
     payload = args.payload
-    if args.payload and args.payload_is_file and args.substitute_parameters:
+    if args.payload and args.payload_is_file and args.subst_params:
         with open(args.payload) as f:
             payload = f.read()
+            payload = payload.replace("\n", "")
             subst_dict = dict([x.split("=")
                                for x in args.subst_params.split(";")])
             for (k, v) in subst_dict.items():
