@@ -393,7 +393,8 @@ def send_s3_request(config: Union[S3Config, str] = None,
                     bucket_name: str = None,
                     key_name: str = None,
                     action: str = None,
-                    additional_headers: Dict[str, str] = None) \
+                    additional_headers: Dict[str, str] = None,
+                    content_file=None) \
                     -> requests.Request:
 
     """Send REST request with headers signed according to S3v4 specification
@@ -490,4 +491,7 @@ def send_s3_request(config: Union[S3Config, str] = None,
                                                          data=payload,
                                                          headers=headers)
 
+    if content_file and response.status_code == 200 and response.content:
+        with open(content_file, "wb") as of:
+            of.write(response.content)       
     return response
