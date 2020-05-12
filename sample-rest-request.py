@@ -142,7 +142,7 @@ if __name__ == "__main__":
     r = requests.get(request_url, headers=headers)
 
     print('\nResponse')
-    print('Response code: %d\n' % r.status_code)
+    print(f"Response code: {r.status_code}\n")
     print(r.text)
 
     # parse and print XML response

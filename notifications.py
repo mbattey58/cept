@@ -63,7 +63,7 @@ if __name__ == "__main__":
     #       computed however
 
     print("\nResponse")
-    print("Response code: %d\n" % r.status_code)
+    print(f"Response code: {r.status_code}\n")
     if r.text:
         print(r.text)
         # parse and print XML response

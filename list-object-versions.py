@@ -22,7 +22,7 @@ if __name__ == "__main__":
                            key_name=None,
                            action=None)
     print('\nResponse')
-    print('Response code: %d\n' % r.status_code)
+    print(f'Response code: {r.status_code}\n')
     print(r.text)
 
     # parse and print XML response

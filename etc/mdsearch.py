@@ -31,7 +31,7 @@ if __name__ == "__main__":
     print(headers)
     r = requests.get(request_url, headers=headers)
     print('\nResponse')
-    print('Response code: %d\n' % r.status_code)
+    print(f"Response code: {r.status_code}\n")
     print(r.text)
     # build request
     request_url, headers = s3.build_request_url(
@@ -47,7 +47,7 @@ if __name__ == "__main__":
     print(headers)
     r = requests.get(request_url, headers=headers)
     print('\nResponse')
-    print('Response code: %d\n' % r.status_code)
+    print(f"Response code: {r.status_code}\n")
     print(r.text)
     # parse and print XML response
     print("\n")
