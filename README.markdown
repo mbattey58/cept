@@ -83,7 +83,7 @@ if __name__ == "__main__":
 *s3-rest.py* is a generic S3 REST client which allows to send requests directly
 from the command line.
 Launch without parameters to see options.
-Credentials are read from a configuration files wih the same structure as the
+Credentials are read from a configuration file wih the same structure as the
 one described above.
 Request content can be both passed on the command line or read from file.
 Content signing is currently not supported for payloads read from file.
@@ -252,8 +252,8 @@ Note that you can set more that one tag at once, just add more tags into
 Tagging: None
   TagSet: None
     Tag: None
-      Key: MyTagKey
-      Value: MyTagValue
+      Key: MyTagKey <----
+      Value: MyTagValue <----
 ```
 
 ## Web request logger
