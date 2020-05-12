@@ -8,7 +8,7 @@
 
    __author__     = "Ugo Varetto"
    __license__    = "MIT"
-   __version__    = "0.2"
+   __version__    = "0.3"
    __maintainer__ = "Ugo Varetto"
    __email__      = "ugovaretto@gmail.com"
    __status__     = "Development"
