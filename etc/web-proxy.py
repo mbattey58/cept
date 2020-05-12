@@ -36,16 +36,6 @@ class ProxyRequestHandler(BaseHTTPRequestHandler):
 
     # Private interface ###################################################
 
-    def __print_request_info(request, client_address, server):
-        ProxyRequestHandler.log_function(
-            f"{request}, {client_address}, {server}")
-
-    def __init__(self, request, client_address, server):
-        self.remote_url = _REMOTE_URL
-        self.chunk_size = _DOWNLOAD_CHUNK_SIZE
-        super(ProxyRequestHandler, self).__init__(
-            request, client_address, server)
-
     def log_message(self, format: str = "", *args):
         s = format
         for a in args:
@@ -141,6 +131,12 @@ class ProxyRequestHandler(BaseHTTPRequestHandler):
         return True
 
     # Public interface ###################################################
+
+    def __init__(self, request, client_address, server):
+        self.remote_url = _REMOTE_URL
+        self.chunk_size = _DOWNLOAD_CHUNK_SIZE
+        super(ProxyRequestHandler, self).__init__(
+            request, client_address, server)
 
     def do_GET(self):
         if self._handle_configuration():
