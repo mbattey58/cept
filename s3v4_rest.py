@@ -213,7 +213,8 @@ def build_request_url(config: Union[S3Config, str] = None,
                       payload_hash: str = UNSIGNED_PAYLOAD,
                       payload_length: int = 0,
                       uri_path: str = '/',
-                      additional_headers: Dict[str, str] = None) -> Request:
+                      additional_headers: Dict[str, str] = None,
+                      proxy_endpoint: str = None) -> Request:
 
     """Build S3 REST request and headers
 
@@ -236,9 +237,11 @@ def build_request_url(config: Union[S3Config, str] = None,
         payload_length (int): length of payload, in case of 'None' no
                               'Content-Length" header is added
         uri_path (str): path appended after protocol:hostname:port
-        additiona_headers (Dic[str,str]): additional custom headers, the
+        additiona_headers (Dict[str,str]): additional custom headers, the
                                           ones starting with 'x-amz-'
                                           are added to the singed list
+        proxy_endpoint (str): in cases where the request is sent to a proxy
+                              do use this endpoint to compose the url
     Returns:
         Tuple[URL, Headers]
 
@@ -371,6 +374,7 @@ def build_request_url(config: Union[S3Config, str] = None,
     headers.update({'Authorization': authorization_header})
 
     # build request
+    endpoint = proxy_endpoint or endpoint
     request_url = endpoint + canonical_uri
     if parameters:
         request_url += '?' + canonical_querystring
@@ -395,7 +399,8 @@ def send_s3_request(config: Union[S3Config, str] = None,
                     key_name: str = None,
                     action: str = None,
                     additional_headers: Dict[str, str] = None,
-                    content_file=None) \
+                    content_file: str = None,
+                    proxy_endpoint: str = None) \
                     -> requests.Request:
 
     """Send REST request with headers signed according to S3v4 specification
@@ -430,6 +435,9 @@ def send_s3_request(config: Union[S3Config, str] = None,
         additiona_headers (Dic[str,str]): additional custom headers, the
                                           ones starting with 'x-amz-'
                                           are added to the singed list
+        content_file (str): file to store received content
+        proxy_endpoint: endpoint to which requests will be sent for further
+                        forwarding to actual endpoint
     Returns:
         requests.Response
 
@@ -483,7 +491,8 @@ def send_s3_request(config: Union[S3Config, str] = None,
         payload_hash=payload_hash,
         payload_length=content_length,
         uri_path=uri_path,
-        additional_headers=additional_headers
+        additional_headers=additional_headers,
+        proxy_endpoint=proxy_endpoint
     )
 
     if payload and payload_is_file_name:
@@ -501,5 +510,5 @@ def send_s3_request(config: Union[S3Config, str] = None,
 
     if content_file and response.status_code == 200 and response.content:
         with open(content_file, "wb") as of:
-            of.write(response.content)       
+            of.write(response.content)
     return response

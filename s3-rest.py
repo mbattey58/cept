@@ -14,7 +14,7 @@
 
         s3-rest.py --method=get --config_file=config/s3-credentials2.json \
                    --bucket=uv-bucket-3 --parameters="versions=''
-        
+
         will print all the version information associated to a bucket
 
         s3-rest.py --method=get  --config_file=config/s3-credentials2.json
@@ -110,6 +110,9 @@ if __name__ == "__main__":
                         help="replaces configuration parameters, " +
                              "key=value ';' separated list",
                         required=False)
+    parser.add_argument('-P', '--proxy-endpoint', type=str, dest="proxy",
+                        help='send request to proxy instead, but sign ' +
+                             'header using actual endpoint', required=False)
 
     args = parser.parse_args()
 
@@ -156,7 +159,8 @@ if __name__ == "__main__":
                            key_name=args.key,
                            action=args.action,
                            additional_headers=headers,
-                           content_file=args.content_file)
+                           content_file=args.content_file,
+                           proxy_endpoint=args.proxy)
     end = time.perf_counter()
     print("Elapsed time: " + str(end - start) + " (s)")
     outfile = sys.stdout if ok(response.status_code) else sys.stderr
