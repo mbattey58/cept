@@ -54,6 +54,7 @@ import requests
 import sys
 import argparse
 import time
+import json
 
 
 def ok(code):
@@ -104,6 +105,11 @@ if __name__ == "__main__":
     parser.add_argument('-o', '--output', type=str, dest='output_type',
                         help="content output type: xml | text | binary",
                         default="xml", required=False)
+    parser.add_argument('-O', '--override-configuration', type=str,
+                        dest="override_config",
+                        help="replaces configuration parameters, " +
+                             "key=value ';' separated list",
+                        required=False)
 
     args = parser.parse_args()
 
@@ -130,9 +136,17 @@ if __name__ == "__main__":
                 payload = payload.replace(k, v)
         payload_is_file = False
 
+    config = None
+    with open(args.config_file, 'r') as j:
+        config = json.loads(j.read())
+
+    if args.override_config:
+        oc = dict([x.split("=", 2) for x in args.override_config.split(";")])
+        config.update(oc)
+
     start = time.perf_counter()
     response = s3.send_s3_request(
-                           config=args.config_file,
+                           config=config,
                            req_method=args.method,
                            parameters=params,
                            payload=payload,

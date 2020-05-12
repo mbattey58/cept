@@ -36,7 +36,7 @@ from typing import Dict, Tuple, List, Union, ByteString, Callable
 
 There are two functions you can use to send requests, one takes care of
 configuring everything and sending the request, the other only returns
-headers and URL and required the client code to send the request to the
+headers and URL and requires the client code to send the request to the
 server; this last method is required when dealing with multi-stage requests
 like multi-part uploads (example code provided).
 
@@ -86,7 +86,7 @@ Launch without parameters to see options.
 Credentials are read from a configuration files wih the same structure as the
 one described above.
 Request content can be both passed on the command line or read from file.
-Signing is currently not supported for payloads read from file.
+Content signing is currently not supported for payloads read from file.
 
 ### Examples
 
@@ -142,6 +142,15 @@ Response headers: {'Content-Length': '11', ...,
                    'x-amz-meta-mymeta': 'My first metadata', <==
                    'x-amz-request-id': ...
                   }
+```
+
+Override configuration read from json file using the `--override_configuration`
+(or `-O`) command line switch.
+Metadata search through Ceph/elasticsearch, need to use different address.
+
+```shell
+./s3-rest.py -b uv-bucket-3 -c config/s3-credentials2.json -b uv-bucket-3 \
+             -t"query=name==text_message" -O "port=8002"
 ```
 
 ### Specifying URIs
