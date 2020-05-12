@@ -23,7 +23,7 @@
 
     credentials and endpoint information are read from a json file which
     must include the following information:
-    
+
     {
         ...
         "access_key": "00000000000000000000000000000000",
@@ -38,9 +38,9 @@
     key=value pairs and will be properly urlencoded;
 
     additional headers can be passes as well on the command line as ';'
-    separated key=value pairs;
+    separated key:value pairs;
 
-    parameters and headers must *always* include key=value pairs, use "key=''"
+    parameters and headers must *always* include key=value pairs, use "key="
     for missing values;
 
     reponse status code, headers, textual and parsed xml body is printed
@@ -54,6 +54,10 @@ import requests
 import sys
 import argparse
 import time
+
+
+def ok(code):
+    return 200 <= code < 300
 
 
 if __name__ == "__main__":
@@ -105,10 +109,10 @@ if __name__ == "__main__":
 
     params = None
     if args.parameters:
-        params = dict([x.split("=") for x in args.parameters.split(";")])
+        params = dict([x.split("=", 1) for x in args.parameters.split(";")])
     headers = None
     if args.headers:
-        headers = dict([x.split("=") for x in args.headers.split(";")])
+        headers = dict([x.split(":", 1) for x in args.headers.split(";")])
 
     # if parameter substitution is required and payload is file name
     # then payload must be read from file, substitutions applied and
@@ -141,19 +145,18 @@ if __name__ == "__main__":
                            content_file=args.content_file)
     end = time.perf_counter()
     print("Elapsed time: " + str(end - start) + " (s)")
-    outfile = sys.stdout if response.status_code == 200 else sys.stderr
+    outfile = sys.stdout if ok(response.status_code) else sys.stderr
     print(f"Response status: {response.status_code}", file=outfile)
     print(f"Response headers: {response.headers}", file=outfile)
-
+    if response.text:
+        print(f"Response body: {response.text}", file=outfile)
     # only print content text when not writing to file and when not binary
     if args.output_type.lower() == 'binary':
         sys.exit(0)
 
-    if response.text and not args.content_file and response.status_code == 200:
-        print(f"Response body: {response.text}", file=outfile)
+    if ok(response.status_code):
         if args.output_type.lower() == 'xml':
             print(s3.xml_to_text(response.text))
     else:
         if response.text:
-            print(f"Response body: {response.text}", file=outfile)
             print(s3.xml_to_text(response.text))

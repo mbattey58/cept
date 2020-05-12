@@ -2,7 +2,7 @@
 import s3v4_rest as s3
 import requests
 import json
-
+https://github.com/ceph/ceph/blob/e68c60ac73cd34fbd8b712258796f645bf75fcb9/doc/radosgw/pubsub-module.rst#s3-compliant-notifications
 # FROM Ceph docs
 # Notification request
 # POST
@@ -44,11 +44,11 @@ if __name__ == "__main__":
     payload = ""
     request_url, headers = s3.build_request_url(
         config=credentials,
-        req_method="POST",
-        parameters=None,
-        payload_hash=s3.hash(payload),  # s3.UNSIGNED_PAYLOAD,
-        payload_length=len(payload),  # will be added by requests.post
-        uri_path=f"/{bucket_name}")
+        req_method="PUT",
+        parameters={"": ""},  #{"topic": "create_object", "events": "OBJECT_CREATE"},
+        payload_hash=s3.hash(""),  #s3.UNSIGNED_PAYLOAD,
+        payload_length=0,  # will be added by requests.post
+        uri_path=f"/topics/new_topic")
         # additional_headers={"Content-Type":
         #                     "application/x-www-form-urlencoded"})
 
@@ -56,7 +56,7 @@ if __name__ == "__main__":
     print("Request URL = " + request_url)
     print(headers)
     print(payload)
-    r = requests.post(request_url, data=parameters, headers=headers)
+    r = requests.put(request_url, data="", headers=headers)
     # NOTE: requests works equally well if instead of payload a dict with
     #       the required parameter/value configuration is passed directly
     #       to the 'data' parameter, hashing of payload must always be

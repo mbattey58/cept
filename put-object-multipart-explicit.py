@@ -73,20 +73,22 @@ if __name__ == "__main__":
         uri_path=f"/{bucket_name}/{key_name}",
     )
 
+    print("Sending begin upload request...")
     r = requests.post(request_url, '', headers=headers)
-    print(r.status_code)
+    print(f"Status code: {r.status_code}")
     if r.status_code != 200:
         print(r.text)
         print(r.headers)
     request_id = s3.get_upload_id(r.text)
-
+    print(f"UploadId: {request_id}")
+    print("Sending multi-part requests...")
     # 2 SEND PARTS:
     fname = "tmp-blob"  # prefix
     parts = []
     number_of_chunks = 2  # == number of files
     for part in range(1, number_of_chunks + 1):
         partname = fname + str(part)
-        print(partname)
+        
         payload_size = os.stat(partname).st_size
         request_url, headers = s3.build_request_url(
             config=credentials,
@@ -97,6 +99,7 @@ if __name__ == "__main__":
             uri_path=f"/{bucket_name}/{key_name}",
         )
 
+        print(f"Sending part {part} of {number_of_chunks}")
         files = {'file': (partname, open(partname, 'rb'))}
         r = requests.put(request_url,
                          files=files,
@@ -122,7 +125,8 @@ if __name__ == "__main__":
         payload_length=len(multipart_list),
         uri_path=f"/{bucket_name}/{key_name}",
     )
-    print(len(multipart_list))
+
+    print("Sending end upload request...")
     r = requests.post(request_url,
                       data=multipart_list,
                       headers=headers)

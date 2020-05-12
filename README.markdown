@@ -111,6 +111,12 @@ key name.
              -a tmp-blobX3 -c config/s3-credentials2.json
 ```
 
+Retrieve list of all uploads.
+
+```shell
+./s3-rest.py  -b uv-bucket-3  -t "uploads=" -c config/s3-credentials2.json
+```
+
 Download object to file, key name as action.
 `GET` is the default method and does not have to be explicitly specified.
 
@@ -124,7 +130,7 @@ Put object with metadata. Action = key name
 ```shell
 ./s3-rest.py  -m put -b uv-bucket-3 -a "some_text" \
               -c config/s3-credentials2.json -p "hello world" \
-              -e "x-amz-meta-mymeta=My first metadata"
+              -e "x-amz-meta-mymeta:My first metadata"
 ```
 
 Retrieve metadata,  `x-amz-meta-`_metadata_lowecase_. Action = key name
@@ -136,6 +142,109 @@ Response headers: {'Content-Length': '11', ...,
                    'x-amz-meta-mymeta': 'My first metadata', <==
                    'x-amz-request-id': ...
                   }
+```
+
+### Specifying URIs
+
+URI: /_bucket_name_/_action_name_?key1=value1&...
+
+Use:
+
+* `--bucket=bucket_name` or `-b`
+* `--action=action_name` or `-a`
+* `--parameters="key1=value1;key2=value2"` or `-t`
+
+The (host, port) information is read from the configuration file.
+Keys are specified as actions.
+
+Use `key=` for keys with no values associated.
+ 
+### Using templates
+
+Any payload can be templated with variables substituted with values before
+the content is sent to the `send_s3_request` function.
+Use the `--substiture_parameters="var1=value1;var2=value2..."` or `-x` command
+line switch to specify the parameters to replace.
+
+E.g. reading an xml request from file:
+
+XML request:
+
+```xml
+<?xml version="1.0" encoding="UTF-8"?>
+<NotificationConfiguration xmlns="http://s3.amazonaws.com/doc/2006-03-01/">
+   <TopicConfiguration>
+      <Event>@event</Event>
+      <Id>@id</Id>
+      <Topic>@topic</Topic>
+   </TopicConfiguration>
+</NotificationConfiguration>
+```
+
+Command line invocation:
+
+```shell
+s3-rest.py -c config_file -p notification.xml -f -m get \
+           -x "@event=s3:ObjectCreated:*;@id=ObjectCreatedId;@topic=Storage"
+```
+
+* `-c config_file` json configuration file
+* `-p notification.xml` file name as payload
+* `-f` treat payload as filename and read content from file
+* `-m get` `GET` method
+* `-x ...` replace keys with values in file specified as payload before sending
+
+### Example: adding and reading tags
+
+**Tag request** (file `xml/PutObjectTagging-template.xml`):
+
+```xml
+<Tagging xmlns="http://s3.amazonaws.com/doc/2006-03-01/">
+   <TagSet>
+      <Tag>
+         <Key>@key</Key>
+         <Value>@value</Value>
+      </Tag>
+   </TagSet>
+</Tagging>
+```
+
+**Add tag reading from xml file and subsituting values**:
+
+```shell
+./s3-rest.py -m put -b uv-bucket-3 -a key-multipart-test10 -t "tagging=" \
+             -c config/s3-credentials2.json \
+             -p xml-requests/PutObjectTagging-template.xml \
+             -f -x"@key=MyTagKey;@value=MyTagValue"
+
+Elapsed time: 0.3629160429991316 (s)
+Response status: 200
+Response headers: {'x-amz-request-id': 
+'tx00000000000000045b60c-005eba4e8f-7623f06d-objectstorage', 
+'Content-Type': 'application/xml', 
+'Content-Length': '0', 
+'Date': 'Tue, 12 May 2020 07:21:52 GMT', 'Connection': 'Keep-Alive'}
+```
+
+* `-p` payload (a filename in this case)
+* `-f` specify that payload is filename and contente has to be read from file
+* `-x` substitute keys with values in payload (content read from file in this case)
+
+Note that you can set more that one tag at once, just add more tags into
+`TagSet`.
+
+**Retrieve and print tags associated with key**:
+
+```shell
+./s3-rest.py -m get -b uv-bucket-3 -a key-multipart-test10 -t "tagging=" `
+             -c config/s3-credentials2.json
+
+...
+Tagging: None
+  TagSet: None
+    Tag: None
+      Key: MyTagKey
+      Value: MyTagValue
 ```
 
 ## Web request logger

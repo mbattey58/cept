@@ -10,16 +10,7 @@ nc = {
     'TopicConfigurations': [
         {
             'Id': 'ID',
-            'TopicArn': 'TOPIC',
-            'Events': [
-                's3:ObjectCreated:*',
-            ]
-        }
-    ],
-    'QueueConfigurations': [
-        {
-            'Id': 'Q',
-            'QueueArn': 'http://localhost',
+            'TopicArn': 'arn:aws:sns:us-east-2:444455556666:MyTopic',
             'Events': [
                 's3:ObjectCreated:*',
             ]
@@ -39,12 +30,12 @@ def main(bucket):
     #         for topic in topics if topic
     #     ]
 
-    with open("config/s3-credentials-local.json", "r") as f:
+    with open("config/s3-credentials.json", "r") as f:
         credentials = json.loads(f.read())
     endpoint = credentials['endpoint']
     access_key = credentials['access_key']
     secret_key = credentials['secret_key']
-
+    bucket = "uv-bucket-3"
     try:
         s3_client = boto3.client('s3',
                                  endpoint_url=endpoint,
