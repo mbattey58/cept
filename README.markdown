@@ -1,6 +1,7 @@
 # Ceph client connection examples
 
-Various examples of how to send REST requests to S3 using only raw URLs + HTTP headers.
+Various examples of how to send REST requests to S3 using only raw URLs + HTTP headers. Used to test Ceph, can be used with any S3-compliant server, or any
+service which uses the AWS header signing algorithm.
 
 `s3v4_rest.py` is a module implementing a generic interface to `S3/Ceph`,
 taking care of building the signed request header and generating the REST URLs,
