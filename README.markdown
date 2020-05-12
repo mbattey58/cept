@@ -111,7 +111,7 @@ key name.
              -a tmp-blobX3 -c config/s3-credentials2.json
 ```
 
-Retrieve list of all uploads.
+Retrieve list of all multi-part uploads.
 
 ```shell
 ./s3-rest.py  -b uv-bucket-3  -t "uploads=" -c config/s3-credentials2.json
