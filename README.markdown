@@ -266,9 +266,7 @@ and e.g. compare them to the one sent by _boto3_ and similar toolkits.
 
 ## Status
 
-Under development, will add more examples covering tagging and advanced features;
-will also add an S3 web gateway proxy to filter, sign, log and change requests and
-reponses on the fly.
+Under development. Version 0.3.
 
 Notifications have not been properly tested.
 
