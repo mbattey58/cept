@@ -75,21 +75,21 @@ class ProxyRequestHandler(BaseHTTPRequestHandler):
         self.send_header('Content-type', 'text/html')
         self.end_headers()
 
-    def _inject_auth(self):
-        headers = self.headers
-        headers['Host'] = self.host_name
+    def _inject_auth(self, headers):
         return headers
 
     def _parse_headers(self):
-        return self._inject_auth()
+        headers = self.headers
+        headers['Host'] = self.host
+        return self._inject_auth(headers)
 
     def _send_headers(self, headers):
         for (k, v) in headers.items():
             self.send_header(k, v)
 
     def _url(self):
-        remote_path = self.path
-        return self.remote_url + f"{remote_path}"
+        r = requests.head(self.remote_url + self.path, allow_redirects=True)
+        return r.url
 
     def _send_response(self, resp):
         msg = self._print_response(resp)
@@ -139,7 +139,7 @@ class ProxyRequestHandler(BaseHTTPRequestHandler):
         self.remote_url = _REMOTE_URL
         self.chunk_size = _DOWNLOAD_CHUNK_SIZE
         parsed_uri = urlparse(self.remote_url)
-        self.host_name = parsed_uri.netloc
+        self.host = parsed_uri.netloc
         super(ProxyRequestHandler, self).__init__(
             request, client_address, server)
 
@@ -149,6 +149,7 @@ class ProxyRequestHandler(BaseHTTPRequestHandler):
             return
         self._log(self._print_reqline_and_headers())
         if self.remote_url:
+            r = requests.head(self._url(), allow_redirects=True)
             req_headers = self._parse_headers()
             resp = requests.get(self._url(), headers=req_headers, stream=True)
             self._send_response(resp)
