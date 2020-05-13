@@ -1,0 +1,10 @@
+{
+    "TopicConfigurations": [
+        {
+            "Topic": "arn:aws:sns:us-west-2:123456789012:s3-notification-topic",
+            "Events": [
+                "s3:ObjectCreated:*"
+            ]
+        }
+    ]
+}

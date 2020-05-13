@@ -19,8 +19,9 @@ from urllib.parse import parse_qs
    at each request in addition to the data logged by the ProxyRequestHandler
    class.
 
-   The web server acceps /__config/... URIs to remotely configure the
-   environment, currently only /__config/endpoint=<endpoint> is supported
+   The web server accepts /__config/... URIs to remotely configure the
+   environment, currently only /__config/endpoint=<endpoint>  and 
+   /__config/download-chunk-size are supported
 """
 
 _REMOTE_URL: str = ""
@@ -53,7 +54,7 @@ class ProxyRequestHandler(BaseHTTPRequestHandler):
 
     def _print_reqline_and_headers(self):
         ProxyRequestHandler.count += 1
-        return "\n" + "="*20 + '\n' + \
+        return "\n===> " + ">"*20 + '\n' + \
                f"**REQUEST #: {ProxyRequestHandler.count}\n" + \
                "------REQUEST LINE:\n" + \
                self.requestline + "\n\n" + \
@@ -61,7 +62,7 @@ class ProxyRequestHandler(BaseHTTPRequestHandler):
                self._print_text_header()
 
     def _print_response(self, resp):
-        return "\n" + "="*20 + '\n' + \
+        return "\n" + "<"*20 + ' <===\n' + \
                f"**RESPONSE #: {ProxyRequestHandler.count}\n" + \
                "------STATUS: " + str(resp.status_code) + '\n' + \
                "------HEADERS" + "\n" + \
@@ -124,9 +125,9 @@ class ProxyRequestHandler(BaseHTTPRequestHandler):
         if "endpoint" in k:
             global _REMOTE_URL
             _REMOTE_URL = req["endpoint"]
-        if "download-buffer" in k:
+        if "download-chunk-size" in k:
             global _DOWNLOAD_CHUNK_SIZE
-            _DOWNLOAD_CHUNK_SIZE = int(req["download-buffer"])
+            _DOWNLOAD_CHUNK_SIZE = int(req["download-chunk-size"])
         self._send_config_response()
         return True
 

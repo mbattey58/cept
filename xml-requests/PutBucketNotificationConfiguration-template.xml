@@ -3,6 +3,6 @@
    <TopicConfiguration>
       <Event>@event</Event>
       <Id>@id</Id>
-      <Topic>@topic</Topic>
+      <TopicArn>@topic</TopicArn>
    </TopicConfiguration>
 </NotificationConfiguration>
