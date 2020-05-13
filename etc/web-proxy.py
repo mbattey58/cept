@@ -6,7 +6,7 @@ from http.server import BaseHTTPRequestHandler, HTTPServer
 import requests
 import typing as T
 from urllib.parse import parse_qs
-
+from urllib.parse import urlparse
 
 """Minimal proxy http server, uses 'logging' module, forwards requests to
    remote endpoint.
@@ -76,7 +76,9 @@ class ProxyRequestHandler(BaseHTTPRequestHandler):
         self.end_headers()
 
     def _inject_auth(self):
-        return self.headers
+        headers = self.headers
+        headers['Host'] = self.host_name
+        return headers
 
     def _parse_headers(self):
         return self._inject_auth()
@@ -136,6 +138,8 @@ class ProxyRequestHandler(BaseHTTPRequestHandler):
     def __init__(self, request, client_address, server):
         self.remote_url = _REMOTE_URL
         self.chunk_size = _DOWNLOAD_CHUNK_SIZE
+        parsed_uri = urlparse(self.remote_url)
+        self.host_name = parsed_uri.netloc
         super(ProxyRequestHandler, self).__init__(
             request, client_address, server)
 
