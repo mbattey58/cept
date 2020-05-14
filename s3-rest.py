@@ -69,9 +69,6 @@ if __name__ == "__main__":
                         help='the S3 bucket name')
     parser.add_argument('-k', '--key', dest='key', type=str, required=False,
                         help='key name')
-    parser.add_argument('-a', '--action', dest='action', type=str,
-                        required=False,
-                        help='action name')
     parser.add_argument('-m', '--method', dest='method', type=str,
                         required=False, default='get',
                         help='method: get, put, post', action='store')
@@ -88,7 +85,7 @@ if __name__ == "__main__":
     parser.add_argument('-s',
                         '--sign_payload', dest='sign_payload', required=False,
                         help='if true "payload" is interpreted as a file name',
-                        nargs='?', type=bool, default=False)
+                        nargs='?', type=bool, default=False, const=True)
     parser.add_argument('-t', '--parameters', dest='parameters',
                         required=False, type=str,
                         help="';' separated list of key=value pairs")
@@ -113,6 +110,14 @@ if __name__ == "__main__":
     parser.add_argument('-P', '--proxy-endpoint', type=str, dest="proxy",
                         help='send request to proxy instead, but sign ' +
                              'header using actual endpoint', required=False)
+    parser.add_argument('-T', '--search-xml-tag', type=str,
+                        dest='xml_tag',
+                        help="search tag value in xml response",
+                        required=False)
+    parser.add_argument('-H', '--search-header-key', type=str,
+                        dest='header_key',
+                        help="search header key in response header",
+                        required=False)
 
     args = parser.parse_args()
 
@@ -157,7 +162,6 @@ if __name__ == "__main__":
                            payload_is_file_name=payload_is_file,
                            bucket_name=args.bucket,
                            key_name=args.key,
-                           action=args.action,
                            additional_headers=headers,
                            content_file=args.content_file,
                            proxy_endpoint=args.proxy)
@@ -178,3 +182,14 @@ if __name__ == "__main__":
     else:
         if response.text:
             print(s3.xml_to_text(response.text))
+
+    if args.xml_tag and response.text:
+        print(args.xml_tag + ":")
+        print(s3.find_xml_tag(args.xml_tag, response.text) or
+              " not found")
+
+    if args.header_key and response.headers:
+        print(args.header_key + ":")
+        print(response.headers[args.header_key]
+              if args.header_key in response.headers
+              else " not found")

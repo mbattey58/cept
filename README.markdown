@@ -49,7 +49,7 @@ import s3v4_rest as s3
 import requests
 import sys
 
-# ListObjects (GET/bucket_name request)
+# ListObjects V2 (GET/bucket_name request)
 
 if __name__ == "__main__":
     if len(sys.argv) != 3:
@@ -66,8 +66,7 @@ if __name__ == "__main__":
                            sign_payload=False,
                            payload_is_file_name=False,
                            bucket_name=bucket_name,
-                           key_name=None,
-                           action=None)
+                           key_name=None)
     print('\nResponse')
     print(f"Response code: {r.status_code}\n")
     print(r.text)
@@ -104,12 +103,11 @@ s3-rest.py --method=get --config_file=config/s3-credentials2.json \
            --bucket=uv-bucket-3 --parameters="versions="
 ```
 
-Copy content of file into object. Notice use of "-a" (action) to specify
-key name.
+Copy content of file into object.
 
 ```shell
 ./s3-rest.py -m put -p tmp/tmp-blob3 -f -b uv-bucket-3 \
-             -a tmp-blobX3 -c config/s3-credentials2.json
+             -k tmp-blobX3 -c config/s3-credentials2.json
 ```
 
 Retrieve list of all multi-part uploads.
@@ -118,26 +116,26 @@ Retrieve list of all multi-part uploads.
 ./s3-rest.py  -b uv-bucket-3  -t "uploads=" -c config/s3-credentials2.json
 ```
 
-Download object to file, key name as action.
+Download object to file.
 `GET` is the default method and does not have to be explicitly specified.
 
 ```shell
 ./s3-rest.py -c config/s3-credentials2.json -b uv-bucket-3 \
-             -a tmp-blob1 -n tmp/tmp-download
+             -k tmp-blob1 -n tmp/tmp-download
 ```
 
-Put object with metadata. Action = key name
+Put object with metadata.
 
 ```shell
-./s3-rest.py  -m put -b uv-bucket-3 -a "some_text" \
+./s3-rest.py  -m put -b uv-bucket-3 -k "some_text" \
               -c config/s3-credentials2.json -p "hello world" \
               -e "x-amz-meta-mymeta:My first metadata"
 ```
 
-Retrieve metadata,  `x-amz-meta-`_metadata_lowecase_. Action = key name
+Retrieve metadata,  `x-amz-meta-`_metadata_lowecase_.
 
 ```shell
-./s3-rest.py -m head -b uv-bucket-3 -a some_text -c config/s3-credentials2.json
+./s3-rest.py -m head -b uv-bucket-3 -k some_text -c config/s3-credentials2.json
 
 Response headers: {'Content-Length': '11', ...,
                    'x-amz-meta-mymeta': 'My first metadata', <==
@@ -156,24 +154,23 @@ Metadata search through Ceph/elasticsearch, need to use different address.
 
 ### Specifying URIs
 
-URI: /_bucket_name_/_action_name_?key1=value1&...
+URI: /_bucket_name_/_key_name_?key1=value1&...
 
 Use:
 
 * `--bucket=bucket_name` or `-b`
-* `--action=action_name` or `-a`
+* `--key=key_name` or `-k`
 * `--parameters="key1=value1;key2=value2"` or `-t`
 
 The (host, port) information is read from the configuration file.
-Keys are specified as actions.
 
-Use `key=` for keys with no values associated.
- 
+Use `key=` for parameter keys with no associated value.
+
 ### Using templates
 
 Any payload can be templated with variables substituted with values before
 the content is sent to the `send_s3_request` function.
-Use the `--substiture_parameters="var1=value1;var2=value2..."` or `-x` command
+Use the `--substitute_parameters="var1=value1;var2=value2..."` or `-x` command
 line switch to specify the parameters to replace.
 
 E.g. reading an xml request from file:
@@ -194,7 +191,7 @@ XML request:
 Command line invocation:
 
 ```shell
-s3-rest.py -c config_file -p notification.xml -f -m get \
+s3-rest.py -c config_file -p notification.xml -f -m post \
            -x "@event=s3:ObjectCreated:*;@id=ObjectCreatedId;@topic=Storage"
 ```
 
@@ -222,7 +219,7 @@ s3-rest.py -c config_file -p notification.xml -f -m get \
 **Add tag reading from xml file and subsituting values**:
 
 ```shell
-./s3-rest.py -m put -b uv-bucket-3 -a key-multipart-test10 -t "tagging=" \
+./s3-rest.py -m put -b uv-bucket-3 -k key-multipart-test10 -t "tagging=" \
              -c config/s3-credentials2.json \
              -p xml-requests/PutObjectTagging-template.xml \
              -f -x"@key=MyTagKey;@value=MyTagValue"
@@ -246,7 +243,7 @@ Note that you can set more that one tag at once, just add more tags into
 **Retrieve and print tags associated with key**:
 
 ```shell
-./s3-rest.py -m get -b uv-bucket-3 -a key-multipart-test10 -t "tagging=" `
+./s3-rest.py -m get -b uv-bucket-3 -k key-multipart-test10 -t "tagging=" `
              -c config/s3-credentials2.json
 
 ...

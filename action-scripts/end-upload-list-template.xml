@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CompleteMultipartUpload xmlns="http://s3.amazonaws.com/doc/2006-03-01/">
+    <Part>
+        <ETag>@etag1</ETag>
+        <PartNumber>@part_number1</PartNumber>
+    </Part>
+    <Part>
+        <ETag>@etag2</ETag>
+        <PartNumber>@part_number2</PartNumber>
+    </Part>
+    <Part>
+        <ETag>@etag3</ETag>
+        <PartNumber>@part_number3</PartNumber>
+    </Part>
+    <Part>
+        <ETag>@etag4</ETag>
+        <PartNumber>@part_number4</PartNumber>
+    </Part>
+    <Part>
+        <ETag>@etag5</ETag>
+        <PartNumber>@part_number5</PartNumber>
+    </Part>
+</CompleteMultipartUpload>

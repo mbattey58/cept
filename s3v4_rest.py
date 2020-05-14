@@ -22,6 +22,7 @@ import hmac
 import xml.etree.ElementTree as ET
 import json
 import requests
+import xmldict
 from typing import Dict, Tuple, List, Union, ByteString, Callable
 
 ###############################################################################
@@ -97,6 +98,57 @@ def _xml_to_text(node: ET,
     return text
 
 
+# Utility functions to search in hierarchical dictionaries
+
+def _find_tag_list(path, d):
+    """Find node in dictionary fron path specified as list of keys, returning
+       either a value or a dictionary depending on the search depth.
+
+    Arguments:
+        path (List[str]): string list identifying search path
+        d (Dict[str, Union[Dict, str]]): dictionary
+    Retunes:
+        List[Union[Dict, str]]
+    """
+
+    if len(path) == 1:
+        if path[0] in d.keys():
+            return d[path[0]]
+        else:
+            return None
+    if path[0] not in d.keys():
+        return None
+    return _find_tag_list(path[1:], d[path[0]])
+
+
+def _find_tag_path(path: str, d):
+    """Find node in dictionary fron path specified as filepath, returning
+       either a value or a dictionary depending on the search depth.
+
+    Arguments:
+        path (str): search path in the form "/key1/key2/..."
+        d (Dict[str, Union[Dict, str]]): dictionary
+    Retunes:
+        List[Union[Dict, str]]
+    """
+    assert(path[0] == "/")
+    return _find_tag_list(path.lower().split("/")[1:], d)
+
+
+def _find_tag(t, d):
+    """Find value in hierarchical dictionary
+    Arguments:
+        t (str): tag name
+        d (Dict[str, Union[str, Dict]]): dictionary
+    """
+    if type(d) != dict:
+        return None
+    if t in d.keys():
+        return d[t]
+
+    return list(filter(lambda x: x, [_find_tag(t, d[k]) for k in d.keys()]))
+
+
 _XML_NAMESPACE_PREFIX = "{http://s3.amazonaws.com/doc/2006-03-01/}"
 
 ###############################################################################
@@ -104,6 +156,36 @@ _XML_NAMESPACE_PREFIX = "{http://s3.amazonaws.com/doc/2006-03-01/}"
 
 
 UNSIGNED_PAYLOAD = "UNSIGNED-PAYLOAD"  # identify payloads with no hash
+
+
+def find_xml_tag_path(tagpath, xml):
+    """Search for specific tag path in xml tree and return list of values
+       or dictionaries in case of non-leaf nodes.
+
+    Arguments:
+        tagpath (str): tag path specified as filepath
+                       e.g. "/root/level1/level2"
+        xml (str): xml text
+    Returns:
+        List[Uion[Dict, str]]
+    """
+
+    d = xmldict.xml_to_dict(xml)
+    return _find_tag_path(tagpath, d)
+
+
+def find_xml_tag(tag, xml):
+    """Search for specific tag in xml tree and return list of values
+       or dictionaries in case of non-leaf nodes.
+
+    Arguments:
+        tag (str): tag specified as string
+        xml (str): xml text
+    Returns:
+        List[Uion[Dict, str]]
+    """
+    d = xmldict.xml_to_dict(xml)
+    return _find_tag(tag, d)
 
 
 def encode_url(params: Dict):
@@ -397,7 +479,6 @@ def send_s3_request(config: Union[S3Config, str] = None,
                     sign_payload: bool = False,
                     bucket_name: str = None,
                     key_name: str = None,
-                    action: str = None,
                     additional_headers: Dict[str, str] = None,
                     content_file: str = None,
                     proxy_endpoint: str = None) \
@@ -453,13 +534,14 @@ def send_s3_request(config: Union[S3Config, str] = None,
     }
 
     """
-    # payload, empty in this case
+
     payload_hash = None
     if sign_payload:
         if payload_is_file_name:
             raise NotImplementedError(
                     "Signing of file content not supported yet")
         else:
+            payload = payload or ""
             payload_hash = hash(payload)
 
     if req_method.lower() not in _REQUESTS_METHODS.keys():
@@ -472,18 +554,15 @@ def send_s3_request(config: Union[S3Config, str] = None,
 
     uri_path = "/" + \
                (f"{bucket_name}/" if bucket_name else "") + \
-               (f"{key_name}/" if key_name else "") + \
-               (f"{action}" if action else "")
+               (f"{key_name}" if key_name else "")
 
     if payload and payload_is_file_name:
         content_length = 0  # will be created by requests when uploading file
 
-    # in case of url parameters, method == POST and empy payload, parameters
-    # are urlencoded and passed in bod automatically by requests and therefore
+    # in case of url parameters, method == POST and empty payload, parameters
+    # are urlencoded and passed in body automatically by requests and therefore
     # request is built with empty body and empty uri
     req_parameters = parameters
-    if not payload and req_method.lower() == 'post' and parameters:
-        req_parameters = {"": ""}
     request_url, headers = build_request_url(
         config=config,
         req_method=req_method,
@@ -496,10 +575,10 @@ def send_s3_request(config: Union[S3Config, str] = None,
     )
 
     if payload and payload_is_file_name:
-        f = {'upload_file': open(payload, 'rb')}
-        response = _REQUESTS_METHODS[req_method.lower()](request_url,
-                                                         files=f,
-                                                         headers=headers)
+        response = _REQUESTS_METHODS[req_method.lower()](
+            request_url,
+            data=open(payload, 'rb'),
+            headers=headers)
     else:
         data = payload
         if parameters and not payload and req_method.lower() == 'post':

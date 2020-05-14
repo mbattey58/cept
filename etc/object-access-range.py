@@ -12,7 +12,7 @@ def print_dict(d):
 #2) Retrieve object reference
 #3) Extract data
 if __name__ == "__main__":
-    with open("s3-credentials.json", "r") as f:
+    with open("config/s3-credentials-local.json", "r") as f:
         credentials = json.loads(f.read())
     endpoint = credentials['endpoint']
     access_key = credentials['access_key']
