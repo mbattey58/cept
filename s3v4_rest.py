@@ -390,6 +390,10 @@ def build_request_url(config: Union[S3Config, str] = None,
     # extract all x-amz-* headers, add defaults, sort and
     # add to signed headers list
     signed_headers_list = ['host', 'x-amz-content-sha256', 'x-amz-date']
+    if additional_headers and ("Range" in additional_headers.keys()
+            or "range" in additional_headers.keys()):
+        signed_headers_list.append("range")
+
     if additional_headers:
         xamz = [x for x in additional_headers.keys()
                 if x.lower()[:5] == 'x-amz']

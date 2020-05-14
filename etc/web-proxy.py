@@ -87,9 +87,9 @@ class ProxyRequestHandler(BaseHTTPRequestHandler):
         # method not currently used
         self.send_response(200)
         self.send_header('Content-type', 'text/html')
-        self.end_headers()
-        self.requestline()
-        self.headers()
+        # self.end_headers()
+        # self.requestline
+        # self.headers()
 
     def _inject_auth(self, headers):
         return headers

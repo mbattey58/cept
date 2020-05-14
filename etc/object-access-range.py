@@ -12,7 +12,7 @@ def print_dict(d):
 #2) Retrieve object reference
 #3) Extract data
 if __name__ == "__main__":
-    with open("config/s3-credentials-local.json", "r") as f:
+    with open("config/s3-credentials.json", "r") as f:
         credentials = json.loads(f.read())
     endpoint = credentials['endpoint']
     access_key = credentials['access_key']
@@ -22,8 +22,8 @@ if __name__ == "__main__":
                                  endpoint_url=endpoint,
                                  aws_access_key_id=access_key,
                                  aws_secret_access_key=secret_key)
-        bucket_name = "uv-bucket-1"
-        key_name = "ceph-file1"
+        bucket_name = "uv-bucket-3"
+        key_name = "key-multipart-test10"
         byte_range="bytes=10-100"
         response = s3_client.get_object(Bucket=bucket_name,
                                         Key=key_name,
