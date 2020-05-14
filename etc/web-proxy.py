@@ -7,6 +7,8 @@ import requests
 import typing as T
 from urllib.parse import parse_qs
 from urllib.parse import urlparse
+import json
+import re
 
 """Minimal proxy http server, uses 'logging' module, forwards requests to
    remote endpoint.
@@ -20,12 +22,24 @@ from urllib.parse import urlparse
    class.
 
    The web server accepts /__config/... URIs to remotely configure the
-   environment, currently only /__config/endpoint=<endpoint>  and 
+   environment, currently only /__config/endpoint=<endpoint> and
    /__config/download-chunk-size are supported
 """
 
+# TODO:move all configuration parameters into _CONFIG dict and just call
+# dict.update with content of JSON config request
+
 _REMOTE_URL: str = ""
 _DOWNLOAD_CHUNK_SIZE: int = 1 << 20
+_MAX_LOG_CONTENT_LENGTH: int = 1 << 10
+
+# NOTE: NOT IMPLEMENTED YET
+# _AWS_V4_SIGNING = False
+# _AWS_ACCESS_KEY = ""
+# _AWS_SECRET_KEY = ""
+# _REQUEST_TIMEOUT = 5
+# _VERIFY_SSL = True
+# _MAX_RETRIES = 1
 
 
 class ProxyRequestHandler(BaseHTTPRequestHandler):
@@ -74,6 +88,8 @@ class ProxyRequestHandler(BaseHTTPRequestHandler):
         self.send_response(200)
         self.send_header('Content-type', 'text/html')
         self.end_headers()
+        self.requestline()
+        self.headers()
 
     def _inject_auth(self, headers):
         return headers
@@ -104,34 +120,31 @@ class ProxyRequestHandler(BaseHTTPRequestHandler):
         msg += f"\nNumber of chunks: {count}, max chunk size: {size} bytes\n\n"
         self._log(msg)
 
-    def _send_config_response(self):
-        self.send_response(code=200)
-        self.send_header('Content-type', 'text/html; charset=utf-8')
-        self.end_headers()
-        resp = "<html><head></head><body><h2>Configuration</h2>" + \
-               f"<p>Remote URL: {self.remote_url}</p>" + \
-               f"<p>Download buffer size: {self.chunk_size}</p>" + \
-               "</body></html>"
-        self.wfile.write(bytes(resp, 'UTF-8'))
+    def _handle_rest_request(self, json_content):
+        config = json.loads(json_content)
+        global _REMOTE_URL
+        global _DOWNLOAD_CHUNK_SIZE
+        result = "no recongnized parameter name in request"
+        if "_REMOTE_URL" in config.keys():
+            _REMOTE_URL = config["_REMOTE_URL"]
+            result = "OK"
+        if "_DOWNLOAD_CHUNK_SIZE" in config.keys():
+            _DOWNLOAD_CHUNK_SIZE = config["_DOWNLOAD_CHUNK_SIZE"]
+            result = "OK"
+        if "get_config" in config.keys():
+            result = f'{{"_REMOTE_URL": "{_REMOTE_URL}",' + \
+                     f'"_DOWNLOAD_CHUNK_SIZE": "{_DOWNLOAD_CHUNK_SIZE}"' + \
+                     "}}"
+            return result
 
-    def _handle_configuration(self):
-        req = parse_qs(self.path)
-        k = list(req.keys())
-        if len(k) == 0:
-            return False
-        if k[0][0:len("/__config/")] != "/__config/":
-            return False
-        k[0] = k[len("/__config/"):]
-        v = list(req.values())
-        req = dict(zip(k, v))
-        if "endpoint" in k:
-            global _REMOTE_URL
-            _REMOTE_URL = req["endpoint"]
-        if "download-chunk-size" in k:
-            global _DOWNLOAD_CHUNK_SIZE
-            _DOWNLOAD_CHUNK_SIZE = int(req["download-chunk-size"])
-        self._send_config_response()
-        return True
+        return f'{{"result": "{result}"}}'
+
+    def _read_content(self):
+        r = re.compile("[Cc]ontent-[Ll]ength")
+        cl = list(filter(r.match, self.headers.keys()))
+        if len(cl) == 0:
+            return None
+        return self.rfile.read(int(self.headers[cl[0]]))
 
     # Public interface ###################################################
 
@@ -144,12 +157,8 @@ class ProxyRequestHandler(BaseHTTPRequestHandler):
             request, client_address, server)
 
     def do_GET(self):
-        if self._handle_configuration():
-            self._send_default_response()
-            return
         self._log(self._print_reqline_and_headers())
         if self.remote_url:
-            r = requests.head(self._url(), allow_redirects=True)
             req_headers = self._parse_headers()
             resp = requests.get(self._url(), headers=req_headers, stream=True)
             self._send_response(resp)
@@ -168,15 +177,16 @@ class ProxyRequestHandler(BaseHTTPRequestHandler):
     def do_POST(self):
         self._log(self._print_reqline_and_headers())
         from array import array
-        a = array('b', self.rfile.read(int(self.headers['Content-Length'])))
-        log_msg = "------REQUEST_BODY" + "\n" + \
-                  f"{a.tostring()}"
+        content = self._read_content()
+        global _MAX_LOG_CONTENT_LENGTH
+        if len(content) < _MAX_LOG_CONTENT_LENGTH:
+            log_msg = "------REQUEST_BODY" + "\n" + \
+                      f"{str(content)}"
         self._log(log_msg)
         if self.remote_url:
             req_headers = self._parse_headers()
-            data = self.rfile.read()  # int(self.headers['Content-Length']))
-            resp = requests.post(self._url(), data=data, headers=req_headers,
-                                 stream=True)
+            resp = requests.put(self._url(), data=content, headers=req_headers,
+                                stream=True)
             self._send_response(resp)
         else:
             self._send_default_response()
@@ -184,14 +194,22 @@ class ProxyRequestHandler(BaseHTTPRequestHandler):
     def do_PUT(self):
         self._log(self._print_reqline_and_headers())
         from array import array
-        a = array('b', self.rfile.read(int(self.headers['Content-Length'])))
-        log_msg = "------REQUEST_BODY" + "\n" + \
-                  f"{a.tostring()}"
+        content = self._read_content()
+        global _MAX_LOG_CONTENT_LENGTH
+        if len(content) < _MAX_LOG_CONTENT_LENGTH:
+            log_msg = "------REQUEST_BODY" + "\n" + \
+                      f"{str(content)}"
         self._log(log_msg)
+        if "application/json" in [v.lower() for v in self.headers.values()]:
+            ret = self._handle_rest_request(content)
+            self.send_response(code=200)
+            self.send_header("Content-Type", "application/json")
+            self.end_headers()
+            self.wfile.write(ret.encode('utf-8'))
+            return
         if self.remote_url:
             req_headers = self._parse_headers()
-            data = self.rfile.read()  # int(self.headers['Content-Length']))
-            resp = requests.put(self._url(), data=data, headers=req_headers,
+            resp = requests.put(self._url(), data=content, headers=req_headers,
                                 stream=True)
             self._send_response(resp)
         else:
@@ -227,3 +245,5 @@ if __name__ == "__main__":
     except KeyboardInterrupt:
         print("\rexiting...")  # without '\r' '^C' is shown
         sys.exit(0)
+    except Exception as e:
+        print("Error: " + e, file=sys.stderr)
