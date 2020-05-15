@@ -24,7 +24,7 @@ if __name__ == "__main__":
                                  aws_secret_access_key=secret_key)
         bucket_name = "uv-bucket-3"
         key_name = "key-multipart-test10"
-        byte_range="bytes=10-100"
+        byte_range = "bytes=10-100"
         response = s3_client.get_object(Bucket=bucket_name,
                                         Key=key_name,
                                         Range=byte_range)

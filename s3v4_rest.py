@@ -13,6 +13,9 @@
    __email__      = "ugovaretto@gmail.com"
    __status__     = "Development"
 
+   See:
+        https://docs.aws.amazon.com/AmazonS3/latest/API/sig-v4-header-based-auth.html
+
 """
 
 from urllib.parse import urlencode
@@ -98,106 +101,12 @@ def _xml_to_text(node: ET,
     return text
 
 
-# Utility functions to search in hierarchical dictionaries
-
-def _find_tag_list(path, d):
-    """Find node in dictionary fron path specified as list of keys, returning
-       either a value or a dictionary depending on the search depth.
-
-    Arguments:
-        path (List[str]): string list identifying search path
-        d (Dict[str, Union[Dict, str]]): dictionary
-    Retunes:
-        List[Union[Dict, str]]
-    """
-
-    if len(path) == 1:
-        if path[0] in d.keys():
-            return d[path[0]]
-        else:
-            return None
-    if path[0] not in d.keys():
-        return None
-    return _find_tag_list(path[1:], d[path[0]])
-
-
-def _find_tag_path(path: str, d):
-    """Find node in dictionary fron path specified as filepath, returning
-       either a value or a dictionary depending on the search depth.
-
-    Arguments:
-        path (str): search path in the form "/key1/key2/..."
-        d (Dict[str, Union[Dict, str]]): dictionary
-    Retunes:
-        List[Union[Dict, str]]
-    """
-    assert(path[0] == "/")
-    return _find_tag_list(path.lower().split("/")[1:], d)
-
-
-def _find_tag(t, d):
-    """Find value in hierarchical dictionary
-    Arguments:
-        t (str): tag name
-        d (Dict[str, Union[str, Dict]]): dictionary
-    """
-    if type(d) != dict:
-        return None
-    if t in d.keys():
-        return d[t]
-
-    return list(filter(lambda x: x, [_find_tag(t, d[k]) for k in d.keys()]))
-
-
 _XML_NAMESPACE_PREFIX = "{http://s3.amazonaws.com/doc/2006-03-01/}"
 
 ###############################################################################
 # Public interface
 
-
 UNSIGNED_PAYLOAD = "UNSIGNED-PAYLOAD"  # identify payloads with no hash
-
-
-def find_xml_tag_path(tagpath, xml):
-    """Search for specific tag path in xml tree and return list of values
-       or dictionaries in case of non-leaf nodes.
-
-    Arguments:
-        tagpath (str): tag path specified as filepath
-                       e.g. "/root/level1/level2"
-        xml (str): xml text
-    Returns:
-        List[Uion[Dict, str]]
-    """
-
-    d = xmldict.xml_to_dict(xml)
-    return _find_tag_path(tagpath, d)
-
-
-def find_xml_tag(tag, xml):
-    """Search for specific tag in xml tree and return list of values
-       or dictionaries in case of non-leaf nodes.
-
-    Arguments:
-        tag (str): tag specified as string
-        xml (str): xml text
-    Returns:
-        List[Uion[Dict, str]]
-    """
-    d = xmldict.xml_to_dict(xml)
-    return _find_tag(tag, d)
-
-
-def encode_url(params: Dict):
-    """Forward to urlencode, since we are alrady importing urlib.parse here
-       do not require client code to re-import it.
-
-    Args:
-        params (Dict): dictionary containing list of key, value pairs
-    Returns:
-        str: URL-encoded text
-    """
-    return urlencode(params)
 
 
 def build_multipart_list(parts: List[Tuple[int, str]]) -> str:
@@ -319,9 +228,9 @@ def build_request_url(config: Union[S3Config, str] = None,
         payload_length (int): length of payload, in case of 'None' no
                               'Content-Length" header is added
         uri_path (str): path appended after protocol:hostname:port
-        additiona_headers (Dict[str,str]): additional custom headers, the
-                                          ones starting with 'x-amz-'
-                                          are added to the singed list
+        additional_headers (Dict[str,str]): additional custom headers, the
+                                            ones starting with 'x-amz-'
+                                            are added to the singed list
         proxy_endpoint (str): in cases where the request is sent to a proxy
                               do use this endpoint to compose the url
     Returns:
@@ -354,8 +263,8 @@ def build_request_url(config: Union[S3Config, str] = None,
 
     payload_hash = payload_hash or UNSIGNED_PAYLOAD  # in case its None
     protocol = conf['protocol']
-    host = conf['host']
     port = conf['port']
+    host = conf['host']
     access_key = conf['access_key']
     secret_key = conf['secret_key']
 
@@ -376,32 +285,36 @@ def build_request_url(config: Union[S3Config, str] = None,
     # Date w/o time, used in credential scope
     datestamp = dt.strftime('%Y%m%d')
 
-    # headers: canonical and singned header list
-    canonical_headers = \
-        'host:' + host + '\n' + \
-        "x-amz-content-sha256:" + payload_hash + '\n' + \
-        'x-amz-date:' + amzdate + '\n'
-
-    # add additional headers
+    default_headers = {'Host': host + ":" + str(port),
+                       'X-Amz-Content-SHA256': payload_hash,
+                       'X-Amz-Date': amzdate}
     if additional_headers:
-        for k, v in additional_headers.items():
-            canonical_headers += f"{k}:{v}" + '\n'
+        ctk = [c for c in additional_headers.keys()
+               if c.lower().strip() == "content-type"]
+        if ctk:
+            default_headers.update({ctk, additional_headers[ctk]})
 
-    # extract all x-amz-* headers, add defaults, sort and
-    # add to signed headers list
+    x_amz_headers = {}
+    if additional_headers:
+        x_amz_headers = {k.strip(): additional_headers[k]
+                         for k in additional_headers.keys()
+                         if k.lower().strip()[:len('x-amz')] == 'x-amz'}
+
+    all_headers = default_headers.copy()
+    all_headers.update(x_amz_headers)
+    canonical_headers = "\n".join(
+                            [f"{k.lower().strip()}:{all_headers[k].strip()}"
+                             for k in sorted(all_headers.keys())]) + "\n"
+
+    # add all x-amz-* headers, sort and add to signed headers list
     signed_headers_list = ['host', 'x-amz-content-sha256', 'x-amz-date']
-    if additional_headers and ("Range" in additional_headers.keys()
-            or "range" in additional_headers.keys()):
-        signed_headers_list.append("range")
+    if x_amz_headers:
+        signed_headers_list.extend([x.lower().strip()
+                                    for x in x_amz_headers.keys()])
 
-    if additional_headers:
-        xamz = [x for x in additional_headers.keys()
-                if x.lower()[:5] == 'x-amz']
-        lk = [x.lower() for x in xamz]
-        signed_headers_list.extend(lk)
-        # ensure unique keys for signing purposes
-        signed_headers_list = list(set(signed_headers_list))
-
+    # keys are already unique since all (key, value) pairs are stored in
+    # dictionary with unique keys, this means the case of multiple headers
+    # with the same key is not supported
     signed_headers_list.sort()
 
     # build signed header string
@@ -447,15 +360,13 @@ def build_request_url(config: Union[S3Config, str] = None,
         signed_headers + ', ' + 'Signature=' + signature
 
     # build standard headers
-    headers = {'Host': host,
-               'X-Amz-Content-SHA256': payload_hash,
-               'X-Amz-Date': amzdate}
+    headers = default_headers
+    
+    if additional_headers:
+        headers.update(additional_headers)
 
     if payload_length:  # client might decide to non send content-length at all
         headers.update({"Content-Length": str(payload_length)})
-
-    if additional_headers:
-        headers.update(additional_headers)
 
     headers.update({'Authorization': authorization_header})
 
@@ -587,8 +498,9 @@ def send_s3_request(config: Union[S3Config, str] = None,
         data = payload
         if parameters and not payload and req_method.lower() == 'post':
             data = parameters
-        response = _REQUESTS_METHODS[req_method.lower()](request_url,
-                                                         data=data,
+            print(data)
+        response = _REQUESTS_METHODS[req_method.lower()](url=request_url,
+                                                         data={"query": "size"},
                                                          headers=headers)
 
     if content_file and response.status_code == 200 and response.content:

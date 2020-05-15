@@ -55,7 +55,7 @@ import sys
 import argparse
 import time
 import json
-
+import xml.etree.ElementTree as ET 
 
 def ok(code):
     return 200 <= code < 300
@@ -110,14 +110,15 @@ if __name__ == "__main__":
     parser.add_argument('-P', '--proxy-endpoint', type=str, dest="proxy",
                         help='send request to proxy instead, but sign ' +
                              'header using actual endpoint', required=False)
-    parser.add_argument('-T', '--search-xml-tag', type=str,
-                        dest='xml_tag',
+    parser.add_argument('-X', '--xml-query', type=str,
+                        dest='xml_query',
                         help="search tag value in xml response",
                         required=False)
-    parser.add_argument('-H', '--search-header-key', type=str,
-                        dest='header_key',
-                        help="search header key in response header",
-                        required=False)
+    parser.add_argument('-H', '--search-headers-keys', type=str,
+                        dest='header_keys',
+                        help="search header key in response header, prefix" +
+                              " tags with 'aws:'",
+                        required=False, nargs='*')
 
     args = parser.parse_args()
 
@@ -183,13 +184,17 @@ if __name__ == "__main__":
         if response.text:
             print(s3.xml_to_text(response.text))
 
-    if args.xml_tag and response.text:
-        print(args.xml_tag + ":")
-        print(s3.find_xml_tag(args.xml_tag, response.text) or
-              " not found")
+    if args.xml_query and response.text:
+        ns = {"aws": "http://s3.amazonaws.com/doc/2006-03-01/"}
+        root = ET.fromstring(response.content)
+        n = root.findall(args.xml_query, ns)
+        print(n)
+        for i in n:
+            print(i.text)
 
-    if args.header_key and response.headers:
-        print(args.header_key + ":")
-        print(response.headers[args.header_key]
-              if args.header_key in response.headers
-              else " not found")
+    if args.header_keys and response.headers:
+        keys = args.header_keys.split(",") if "," in args.header_keys \
+                                           else args.header_keys
+        for k in keys:
+            if k in response.headers.keys():
+                print(f"{k}: {response.headers[k]}")
