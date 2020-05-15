@@ -118,7 +118,9 @@ if __name__ == "__main__":
                         dest='header_keys',
                         help="search header key in response header, prefix" +
                               " tags with 'aws:'",
-                        required=False, nargs='*')
+                        required=False)
+    parser.add_argument('-M', '--mute', type=bool, required=False, nargs="?",
+                        help='disable logging', const=True, dest='mute')
 
     args = parser.parse_args()
 
@@ -167,22 +169,23 @@ if __name__ == "__main__":
                            content_file=args.content_file,
                            proxy_endpoint=args.proxy)
     end = time.perf_counter()
-    print("Elapsed time: " + str(end - start) + " (s)")
-    outfile = sys.stdout if ok(response.status_code) else sys.stderr
-    print(f"Response status: {response.status_code}", file=outfile)
-    print(f"Response headers: {response.headers}", file=outfile)
-    if response.text:
-        print(f"Response body: {response.text}", file=outfile)
-    # only print content text when not writing to file and when not binary
-    if args.output_type.lower() == 'binary':
-        sys.exit(0)
-
-    if ok(response.status_code):
-        if args.output_type.lower() == 'xml':
-            print(s3.xml_to_text(response.text))
-    else:
+    if not args.mute:
+        print("Elapsed time: " + str(end - start) + " (s)")
+        outfile = sys.stdout if ok(response.status_code) else sys.stderr
+        print(f"Response status: {response.status_code}", file=outfile)
+        print(f"Response headers: {response.headers}", file=outfile)
         if response.text:
-            print(s3.xml_to_text(response.text))
+            print(f"Response body: {response.text}", file=outfile)
+        # only print content text when not writing to file and when not binary
+        if args.output_type.lower() == 'binary':
+            sys.exit(0)
+
+        if ok(response.status_code):
+            if args.output_type.lower() == 'xml':
+                print(s3.xml_to_text(response.text))
+        else:
+            if response.text:
+                print(s3.xml_to_text(response.text))
 
     if args.xml_query and response.text:
         ns = {"aws": "http://s3.amazonaws.com/doc/2006-03-01/"}
@@ -194,6 +197,9 @@ if __name__ == "__main__":
     if args.header_keys and response.headers:
         keys = args.header_keys.split(",") if "," in args.header_keys \
                                            else args.header_keys
-        for k in keys:
-            if k in response.headers.keys():
-                print(f"{k}: {response.headers[k]}")
+        if keys and type(keys) == str and keys in response.headers.keys():
+            print(f"{keys}: {response.headers[keys]}")
+        else:
+            for k in keys:
+                if k in response.headers.keys():
+                    print(f"{k}: {response.headers[k]}")
