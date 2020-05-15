@@ -188,7 +188,6 @@ if __name__ == "__main__":
         ns = {"aws": "http://s3.amazonaws.com/doc/2006-03-01/"}
         root = ET.fromstring(response.content)
         n = root.findall(args.xml_query, ns)
-        print(n)
         for i in n:
             print(i.text)
 

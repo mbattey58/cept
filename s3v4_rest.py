@@ -498,7 +498,6 @@ def send_s3_request(config: Union[S3Config, str] = None,
         data = payload
         if parameters and not payload and req_method.lower() == 'post':
             data = parameters
-            print(data)
         response = _REQUESTS_METHODS[req_method.lower()](url=request_url,
                                                          data={"query": "size"},
                                                          headers=headers)
