@@ -47,7 +47,16 @@
     to either standard output (200 status) or standard error (non 200 status);
 
     supports saving content to file and substituting parameters in text
-    requests before they are sent.
+    requests before they are sent;
+
+    content and headers can be searched:
+        headers:
+            --search-header="<header key1>:<value1>;<header key 2>:<value2>..."
+        xml content:
+            --search-xml="aws:TAGNAME"
+            "aws:" indentifies the AWS XML namespace and shall always be
+            specified when searching for standard reponse tags such as
+            '<UploadId>'
 """
 import s3v4_rest as s3
 import requests
@@ -55,7 +64,8 @@ import sys
 import argparse
 import time
 import json
-import xml.etree.ElementTree as ET 
+import xml.etree.ElementTree as ET
+
 
 def ok(code):
     return 200 <= code < 300
