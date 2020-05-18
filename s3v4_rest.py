@@ -1,6 +1,6 @@
 """Send pure REST requests to S3 using protocol version 4
 
-   Builds URL requests from
+   Signs headers and builds URL requests from
    * endpoint
    * access key
    * secret key
@@ -8,7 +8,7 @@
 
    __author__     = "Ugo Varetto"
    __license__    = "MIT"
-   __version__    = "0.3"
+   __version__    = "0.4"
    __maintainer__ = "Ugo Varetto"
    __email__      = "ugovaretto@gmail.com"
    __status__     = "Development"
@@ -25,7 +25,9 @@ import hmac
 import xml.etree.ElementTree as ET
 import json
 import requests
-import xmldict
+import logging
+import time
+
 from typing import Dict, Tuple, List, Union, ByteString, Callable
 
 ###############################################################################
@@ -248,6 +250,7 @@ def build_request_url(config: Union[S3Config, str] = None,
     }
 
     """
+    start = time.perf_counter()
     # TODO: raise excpetion if any key in 'additional_headers' matches keys
     # in headers dictionary ??
     if type(config) == dict:
@@ -361,7 +364,7 @@ def build_request_url(config: Union[S3Config, str] = None,
 
     # build standard headers
     headers = default_headers
-    
+
     if additional_headers:
         headers.update(additional_headers)
 
@@ -370,11 +373,34 @@ def build_request_url(config: Union[S3Config, str] = None,
 
     headers.update({'Authorization': authorization_header})
 
+    if logging.getLogger().level == logging.DEBUG:
+        elapsed = time.perf_counter() - start
+        logging.debug(f"Header signing time (us): {int(elapsed * 1E6)}")
+
     # build request
     endpoint = proxy_endpoint or endpoint
     request_url = endpoint + canonical_uri
     if parameters:
         request_url += '?' + canonical_querystring
+
+    if logging.getLogger().level == logging.DEBUG:
+        n = '\n'
+        msg = "CANONICAL REQUEST\n" + 20 * "=" + n
+        msg += "Method: " + method + n + \
+               "Canonical URI: " + canonical_uri + n + \
+               "Canonical querystring: " + canonical_querystring + n + \
+               "Canonical headers: " + n
+        chl = canonical_headers.split("\n")
+        for h in chl:
+            msg += "\t" + h + n
+        msg += "Payload hash: " + (payload_hash or "")
+        logging.debug(msg)
+
+    if logging.getLogger().level == logging.INFO:
+        msg = "REQUEST HEADERS\n" + 20 * "=" + '\n'
+        for k, v in headers.items():
+            msg += f"{k}: {v}\n"
+        msg += "\n" + "REQUEST URL: " + request_url + '\n'
 
     return request_url, headers
 
@@ -449,7 +475,7 @@ def send_s3_request(config: Union[S3Config, str] = None,
     }
 
     """
-
+    start = time.perf_counter()
     payload_hash = None
     if sign_payload:
         if payload_is_file_name:
@@ -494,6 +520,8 @@ def send_s3_request(config: Union[S3Config, str] = None,
             request_url,
             data=open(payload, 'rb'),
             headers=headers)
+        if logging.getLogger().level == logging.DEBUG:
+            logging.debug("Payload: file " + payload + '\n')
     else:
         data = payload
         if parameters and not payload and req_method.lower() == 'post':
@@ -501,8 +529,32 @@ def send_s3_request(config: Union[S3Config, str] = None,
         response = _REQUESTS_METHODS[req_method.lower()](url=request_url,
                                                          data=data,
                                                          headers=headers)
+        if logging.getLogger().level == logging.DEBUG:
+            logging.debug("Payload: \n" + (payload or "") + '\n')
 
     if content_file and response.status_code == 200 and response.content:
         with open(content_file, "wb") as of:
             of.write(response.content)
+
+    logfun = logging.info \
+        if 200 <= response.status_code < 300 else logging.error
+
+    if logging.getLogger().level == logging.DEBUG:
+        elapsed = time.perf_counter() - start
+        digits = 4
+        logfun("Request-reponse time (s): " +
+               f"{int(elapsed * 10**digits)/10**digits}")
+
+    if logging.getLogger().level == logging.INFO:
+        msg = "RESPONSE STATUS CODE: " + str(response.status_code) + '\n'
+        msg = "RESPONSE HEADERS\n" + 20 * "=" + '\n'
+        for k, v in response.headers.items():
+            msg += f"{k}: {v}\n"
+        logfun(msg)
+
+    if response.content:
+        msg = "RESPONSE CONTENT\n" + 20 * "=" + '\n'
+        msg += response.content[:1024].decode('utf-8')
+        logfun(msg)
+
     return response

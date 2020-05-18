@@ -1,9 +1,10 @@
 #!/usr/bin/env python3
-"""Send REST request specified on the command line to S3 services.
+"""Send REST request specified on the command line to S3 services, like
+   curl + S3v4 signing
 
    __author__     = "Ugo Varetto"
    __license__    = "MIT"
-   __version__    = "0.3"
+   __version__    = "0.4"
    __maintainer__ = "Ugo Varetto"
    __email__      = "ugovaretto@gmail.com"
    __status__     = "Development"
@@ -34,22 +35,22 @@
         ...
     }
 
-    url parameters can be passed on the command line as ';' separated
-    key=value pairs and will be properly urlencoded;
+    Main command line switches (run with --help for full list).
 
-    additional headers can be passes as well on the command line as ';'
-    separated key:value pairs;
+    -c <json config file>
+    -m [head | get | put | post | delete] request method
+    -b [bucket name]
+    -k [key name] Only valid if -b present
+    -p [payload] Payload as text on the command line or filename if -f present
+    -f [] interpret payload as file name
+    -n [filename] dump content to file
+    -t ["key1=value1;key2=value2..."] URI request parameters
+    -e ["Header-1:Value1;Header-2;Value2..."] Headers
+    -l [ERROR | WARN | INFO | DEBUG | RAW | MUTE] log level:
+        ERROR | WARN | INFO | DEBUG --> passed to loggin module
+        RAW: simply print STATUS CODE, HEADERS and CONTENT to STDOUT
 
-    parameters and headers must *always* include key=value pairs, use "key="
-    for missing values;
-
-    reponse status code, headers, textual and parsed xml body is printed
-    to either standard output (200 status) or standard error (non 200 status);
-
-    supports saving content to file and substituting parameters in text
-    requests before they are sent;
-
-    content and headers can be searched:
+    response content and headers can be searched:
         headers:
             --search-header="<header key1>:<value1>;<header key 2>:<value2>..."
         xml content:
@@ -64,6 +65,7 @@ import sys
 import argparse
 import time
 import json
+import logging
 import xml.etree.ElementTree as ET
 
 
@@ -129,10 +131,20 @@ if __name__ == "__main__":
                         help="search header key in response header, prefix" +
                               " tags with 'aws:'",
                         required=False)
-    parser.add_argument('-M', '--mute', type=bool, required=False, nargs="?",
-                        help='disable logging', const=True, dest='mute')
+    parser.add_argument('-l', '--log-level', type=str, required=False,
+                        help='log level passed to log module: ERROR | WARN ' +
+                             '| INFO | DEBUG | RAW or MUTE for no output',
+                             default="INFO",
+                             dest="log_level")
 
     args = parser.parse_args()
+
+    if args.log_level.upper() != "RAW":
+        if args.log_level.upper() == "MUTE":
+            logging.getLogger().propagate = False
+        else:
+            logging.basicConfig(level=args.log_level)
+            print()
 
     params = None
     if args.parameters:
@@ -165,7 +177,6 @@ if __name__ == "__main__":
         oc = dict([x.split("=", 2) for x in args.override_config.split(";")])
         config.update(oc)
 
-    start = time.perf_counter()
     response = s3.send_s3_request(
                            config=config,
                            req_method=args.method,
@@ -178,24 +189,12 @@ if __name__ == "__main__":
                            additional_headers=headers,
                            content_file=args.content_file,
                            proxy_endpoint=args.proxy)
-    end = time.perf_counter()
-    if not args.mute:
-        print("Elapsed time: " + str(end - start) + " (s)")
-        outfile = sys.stdout if ok(response.status_code) else sys.stderr
-        print(f"Response status: {response.status_code}", file=outfile)
-        print(f"Response headers: {response.headers}", file=outfile)
-        if response.text:
-            print(f"Response body: {response.text}", file=outfile)
-        # only print content text when not writing to file and when not binary
-        if args.output_type.lower() == 'binary':
-            sys.exit(0)
 
-        if ok(response.status_code):
-            if args.output_type.lower() == 'xml':
-                print(s3.xml_to_text(response.text))
-        else:
-            if response.text:
-                print(s3.xml_to_text(response.text))
+    if args.log_level.upper() == "RAW":
+        print("HEADERS:\n")
+        print(response.headers)
+        print("\nCONTENT:\n")
+        print(response.content)
 
     if args.xml_query and response.text:
         ns = {"aws": "http://s3.amazonaws.com/doc/2006-03-01/"}

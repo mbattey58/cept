@@ -86,10 +86,11 @@ class ProxyRequestHandler(BaseHTTPRequestHandler):
     def _send_default_response(self, method=None):
         # method not currently used
         self.send_response(200)
-        self.send_header('Content-type', 'text/html')
-        # self.end_headers()
-        # self.requestline
-        # self.headers()
+        self.send_header('Content-type', 'text/plain')
+        self.end_headers()
+        self.wfile.write(("Request line: " + self.requestline + '\n' +
+                         "Request Headers" + str(self.headers) + '\n')
+                         .encode())
 
     def _inject_auth(self, headers):
         return headers
