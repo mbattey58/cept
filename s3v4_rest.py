@@ -27,7 +27,7 @@ import json
 import requests
 import logging
 import time
-
+import xml.dom.minidom  # better than ET for pretty printing
 from typing import Dict, Tuple, List, Union, ByteString, Callable
 
 ###############################################################################
@@ -208,7 +208,6 @@ def build_request_url(config: Union[S3Config, str] = None,
                       uri_path: str = '/',
                       additional_headers: Dict[str, str] = None,
                       proxy_endpoint: str = None) -> Request:
-
     """Build S3 REST request and headers
 
     S3Config type: Dict[str, str] with keys:
@@ -306,8 +305,8 @@ def build_request_url(config: Union[S3Config, str] = None,
     all_headers = default_headers.copy()
     all_headers.update(x_amz_headers)
     canonical_headers = "\n".join(
-                            [f"{k.lower().strip()}:{all_headers[k].strip()}"
-                             for k in sorted(all_headers.keys())]) + "\n"
+        [f"{k.lower().strip()}:{all_headers[k].strip()}"
+         for k in sorted(all_headers.keys())]) + "\n"
 
     # add all x-amz-* headers, sort and add to signed headers list
     signed_headers_list = ['host', 'x-amz-content-sha256', 'x-amz-date']
@@ -423,8 +422,7 @@ def send_s3_request(config: Union[S3Config, str] = None,
                     additional_headers: Dict[str, str] = None,
                     content_file: str = None,
                     proxy_endpoint: str = None) \
-                    -> requests.Request:
-
+        -> requests.Request:
     """Send REST request with headers signed according to S3v4 specification
 
     S3Config type: Dict[str, str] with keys:
@@ -480,7 +478,7 @@ def send_s3_request(config: Union[S3Config, str] = None,
     if sign_payload:
         if payload_is_file_name:
             raise NotImplementedError(
-                    "Signing of file content not supported yet")
+                "Signing of file content not supported yet")
         else:
             payload = payload or ""
             payload_hash = hash(payload)
@@ -554,7 +552,18 @@ def send_s3_request(config: Union[S3Config, str] = None,
 
     if response.content:
         msg = "RESPONSE CONTENT\n" + 20 * "=" + '\n'
-        msg += response.content[:1024].decode('utf-8')
+        if "Content-Type" in response.headers.keys():
+            if (response.headers["Content-type"] == "application/json" or
+                    response.headers["Content-type"] == "text/plain"):
+                msg += response.content.decode('utf-8')
+            elif (response.headers["Content-type"] == "text/html" or
+                    response.headers["Content-type"] == "application/xml"):
+                dom = xml.dom.minidom.parseString(
+                        response.content.decode('utf-8'))
+                pretty = dom.toprettyxml(indent="   ")
+                msg += pretty
+        else:
+            msg += response.content[:1024].decode('utf-8')
         logfun(msg)
 
     return response

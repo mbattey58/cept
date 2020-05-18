@@ -254,17 +254,18 @@ Tagging: None
       Value: MyTagValue <----
 ```
 
-## Web request logger
+## Web request logger and proxy
 
 The repository includes `etc/log-web-requests.py` which implements a minimal
 webserver which logs received web requests through a configurable logger,
 `logging` module being the default, and answers with configurable responses,
-default is an empty `200` (`OK`) status code. Useful to debug _REST_ requests
-and e.g. compare them to the one sent by _boto3_ and similar toolkits.
+default is a copy of the received request.
+The web request logger also works as a proxy logging requests received from
+a client and responsed received from the server.
 
 ## Status
 
-Under development. Version 0.3.
+Under development. Version 0.4.
 
 Notifications have not been properly tested.
 

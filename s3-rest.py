@@ -66,11 +66,8 @@ import argparse
 import time
 import json
 import logging
+import xml.dom.minidom  # better than ET for pretty printing
 import xml.etree.ElementTree as ET
-
-
-def ok(code):
-    return 200 <= code < 300
 
 
 if __name__ == "__main__":
@@ -191,10 +188,24 @@ if __name__ == "__main__":
                            proxy_endpoint=args.proxy)
 
     if args.log_level.upper() == "RAW":
+        print("STATUS CODE: " + str(response.status_code) + "\n")
         print("HEADERS:\n")
         print(response.headers)
-        print("\nCONTENT:\n")
-        print(response.content)
+        if response.content:
+            msg = "RESPONSE CONTENT\n" + 20 * "=" + '\n'
+            if "Content-Type" in response.headers.keys():
+                if (response.headers["Content-type"] == "application/json" or
+                        response.headers["Content-type"] == "text/plain"):
+                    msg += response.content.decode('utf-8')
+                elif (response.headers["Content-type"] == "text/html" or
+                        response.headers["Content-type"] == "application/xml"):
+                    dom = xml.dom.minidom.parseString(
+                            response.content.decode('utf-8'))
+                    pretty = dom.toprettyxml(indent="   ")
+                    msg += pretty
+            else:
+                msg += response.content[:1024].decode('utf-8')
+            print(msg)
 
     if args.xml_query and response.text:
         ns = {"aws": "http://s3.amazonaws.com/doc/2006-03-01/"}
