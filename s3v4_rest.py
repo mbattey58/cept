@@ -539,13 +539,15 @@ def send_s3_request(config: Union[S3Config, str] = None,
         if logging.getLogger().level == logging.DEBUG:
             logging.debug("Payload: \n" + (payload or "") + '\n')
 
-    if content_file and response.status_code == 200 and response.content:
+    def ok(code):
+        return 200 <= code < 300
+
+    if content_file and ok(response.status_code) and response.content:
         with open(content_file, "wb") as of:
             for i in response.iter_content(chunk_size=chunk_size):
                 of.write(i)
 
-    logfun = logging.info \
-        if 200 <= response.status_code < 300 else logging.error
+    logfun = logging.info if ok(response.status_code) else logging.error
 
     if logging.getLogger().level == logging.DEBUG:
         elapsed = time.perf_counter() - start
