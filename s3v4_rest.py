@@ -1,4 +1,4 @@
-"""Send pure REST requests to S3 using protocol version 4
+"""Send REST requests to S3 using protocol version 4
 
    Signs headers and builds URL requests from
    * endpoint
@@ -8,7 +8,7 @@
 
    __author__     = "Ugo Varetto"
    __license__    = "MIT"
-   __version__    = "0.4"
+   __version__    = "0.5"
    __maintainer__ = "Ugo Varetto"
    __email__      = "ugovaretto@gmail.com"
    __status__     = "Development"
@@ -411,6 +411,11 @@ _REQUESTS_METHODS = {"get": requests.get,
                      "head": requests.head}
 
 
+def _find_key(d: Dict, key: str):
+    k = [x for x in d.keys() if x.lower() == key.lower()]
+    return k[0] if len(k) else None
+
+
 def send_s3_request(config: Union[S3Config, str] = None,
                     req_method: RequestMethod = "GET",
                     parameters: RequestParameters = None,
@@ -421,7 +426,8 @@ def send_s3_request(config: Union[S3Config, str] = None,
                     key_name: str = None,
                     additional_headers: Dict[str, str] = None,
                     content_file: str = None,
-                    proxy_endpoint: str = None) \
+                    proxy_endpoint: str = None,
+                    chunk_size: int = 1 << 20) \
         -> requests.Request:
     """Send REST request with headers signed according to S3v4 specification
 
@@ -513,11 +519,13 @@ def send_s3_request(config: Union[S3Config, str] = None,
         proxy_endpoint=proxy_endpoint
     )
 
+    response = None
     if payload and payload_is_file_name:
         response = _REQUESTS_METHODS[req_method.lower()](
             request_url,
             data=open(payload, 'rb'),
-            headers=headers)
+            headers=headers,
+            stream=True)
         if logging.getLogger().level == logging.DEBUG:
             logging.debug("Payload: file " + payload + '\n')
     else:
@@ -526,13 +534,15 @@ def send_s3_request(config: Union[S3Config, str] = None,
             data = parameters
         response = _REQUESTS_METHODS[req_method.lower()](url=request_url,
                                                          data=data,
-                                                         headers=headers)
+                                                         headers=headers,
+                                                         stream=True)
         if logging.getLogger().level == logging.DEBUG:
             logging.debug("Payload: \n" + (payload or "") + '\n')
 
     if content_file and response.status_code == 200 and response.content:
         with open(content_file, "wb") as of:
-            of.write(response.content)
+            for i in response.iter_content(chunk_size=chunk_size):
+                of.write(i)
 
     logfun = logging.info \
         if 200 <= response.status_code < 300 else logging.error
@@ -544,26 +554,35 @@ def send_s3_request(config: Union[S3Config, str] = None,
                f"{int(elapsed * 10**digits)/10**digits}")
 
     if logging.getLogger().level == logging.INFO:
-        msg = "RESPONSE STATUS CODE: " + str(response.status_code) + '\n'
-        msg = "RESPONSE HEADERS\n" + 20 * "=" + '\n'
+        msg = "\nRESPONSE STATUS CODE: " + str(response.status_code) + '\n'
+        msg += "RESPONSE HEADERS\n" + 20 * "=" + '\n'
         for k, v in response.headers.items():
             msg += f"{k}: {v}\n"
         logfun(msg)
 
-    if response.content:
+    def read_chunks():
+        nonlocal response
+        text = ""
+        for i in response.iter_content(chunk_size=chunk_size):
+            text += i.decode('utf-8')
+        return text
+
+    if response.content and not content_file:
         msg = "RESPONSE CONTENT\n" + 20 * "=" + '\n'
         if "Content-Type" in response.headers.keys():
             if (response.headers["Content-type"] == "application/json" or
                     response.headers["Content-type"] == "text/plain"):
-                msg += response.content.decode('utf-8')
+                msg += read_chunks()
+                print("<<<<<<<< " + msg[4:])
             elif (response.headers["Content-type"] == "text/html" or
                     response.headers["Content-type"] == "application/xml"):
-                dom = xml.dom.minidom.parseString(
-                        response.content.decode('utf-8'))
+                dom = xml.dom.minidom.parseString(read_chunks())
                 pretty = dom.toprettyxml(indent="   ")
                 msg += pretty
+            else:
+                msg += read_chunks()[:1024]
         else:
-            msg += response.content[:1024].decode('utf-8')
+            msg += read_chunks()[:1024]
         logfun(msg)
 
     return response

@@ -32,6 +32,9 @@ import hmac
 import xml.etree.ElementTree as ET
 import json
 import requests
+import logging
+import time
+import xml.dom.minidom  # better than ET for pretty printing
 from typing import Dict, Tuple, List, Union, ByteString, Callable
 ```
 
@@ -226,10 +229,10 @@ s3-rest.py -c config_file -p notification.xml -f -m post \
 
 Elapsed time: 0.3629160429991316 (s)
 Response status: 200
-Response headers: {'x-amz-request-id': 
-'tx00000000000000045b60c-005eba4e8f-7623f06d-objectstorage', 
-'Content-Type': 'application/xml', 
-'Content-Length': '0', 
+Response headers: {'x-amz-request-id':
+'tx00000000000000045b60c-005eba4e8f-7623f06d-objectstorage',
+'Content-Type': 'application/xml',
+'Content-Length': '0',
 'Date': 'Tue, 12 May 2020 07:21:52 GMT', 'Connection': 'Keep-Alive'}
 ```
 
@@ -254,6 +257,134 @@ Tagging: None
       Value: MyTagValue <----
 ```
 
+### Example: appending/streaming data into an object
+
+In order to create appendable object the object must be created with an
+append action, appending data at position zero.
+
+```shell
+./s3-rest.py -c config/s3-credentials2.json -b append-bucket \
+             -k object-5 -m put -t"append=;position=0" -p "Hello" \
+             -H "x-rgw-next-append-position"
+
+RESPONSE STATUS CODE: 200
+RESPONSE HEADERS
+====================
+Content-Length: 0
+ETag: "6e6bc4e49dd477ebc98ef4046c067b5f"
+Accept-Ranges: bytes
+x-rgw-next-append-position: 4 <======
+x-amz-request-id: tx00000000000000003c54d-005ec3e01b-76c8018f-objectstorage
+Date: Tue, 19 May 2020 13:33:15 GMT
+Connection: Keep-Alive
+
+x-rgw-next-append-position: 4
+```
+
+`-H` searches for a header in the response and prints header name and value.
+
+Notice the `x-rgw-next-append-position: 4` header which returns the append
+position to use in the next append request to append data to the object.
+
+To append:
+
+```shell
+./s3-rest.py -c config/s3-credentials2.json -b append-bucket -k object-5 \
+             -m put -t"append=;position=4" -p "\n how are you?" \
+             -H "x-rgw-next-append-position"
+
+INFO:root:
+RESPONSE STATUS CODE: 200
+RESPONSE HEADERS
+====================
+Content-Length: 0
+ETag: "b9b0be753cd84dc7c34c2fd7539ae588"
+Accept-Ranges: bytes
+x-rgw-next-append-position: 19
+x-amz-request-id: tx000000000000000053eea-005ec3e04e-76c9b5d1-objectstorage
+Date: Tue, 19 May 2020 13:34:06 GMT
+Connection: Keep-Alive
+
+x-rgw-next-append-position: 19
+```
+
+The next append position is simply the object size.
+Note that `\n` are intepreted as two characters.
+
+After another few additions, if you `stat` the objec it will look like:
+
+```shell
+./s3-rest.py -c config/s3-credentials2.json -b append-bucket -k object-5 -m head
+
+INFO:root:
+RESPONSE STATUS CODE: 200
+RESPONSE HEADERS
+====================
+Content-Length: 25
+Accept-Ranges: bytes
+Last-Modified: Tue, 19 May 2020 13:38:03 GMT
+x-rgw-object-type: Appendable
+x-rgw-next-append-position: 25
+ETag: "fd7a16b1ec3f67458d0e887aca84b682-4"
+x-amz-request-id: tx000000000000000069fff-005ec3e6c1-76c9b5d1-objectstorage
+Content-Type: binary/octet-stream
+Date: Tue, 19 May 2020 14:01:37 GMT
+Connection: Keep-Alive
+```
+
+Notice the `x-rgw-object-type: Appendable` property, only object created from
+the beginning with an append action can be appended to.
+
+...and you can add meta data to the object in the process:
+
+```shell
+./s3-rest.py -c config/s3-credentials2.json -b append-bucket -k object-5 \
+             -p "..." -t"append=;position=25" -m put \
+             -H "x-rgw-next-append-position" 
+             -e"x-amz-meta-some_meta_data_key:some meta data value"
+
+./s3-rest.py -c config/s3-credentials2.json -b append-bucket -k object-5 -m head
+
+Content-Length: 28
+Accept-Ranges: bytes
+Last-Modified: Tue, 19 May 2020 14:04:57 GMT
+x-rgw-object-type: Appendable
+x-rgw-next-append-position: 28
+ETag: "e16fd5bd6cb1c49a463a174435a7f799-5"
+
+x-amz-meta-some-meta-data-key: some meta data value <=====
+
+x-amz-request-id: tx00000000000000004e698-005ec3e791-76c80189-objectstorage
+Content-Type: binary/octet-stream
+Date: Tue, 19 May 2020 14:05:05 GMT
+Connection: Keep-Alive
+```
+
+And you can easily change any meta-data: just submit a request with a
+zero-length payload:
+
+```shell
+./s3-rest.py -c config/s3-credentials2.json -b append-bucket -k object-5 \
+             -p "" -t"append=;position=28" -m put  \
+             -e"x-amz-meta-some_meta_data_key:CHANGED!"
+
+./s3-rest.py -c config/s3-credentials2.json -b append-bucket -k object-5 -m head
+...
+x-rgw-object-type: Appendable
+x-rgw-next-append-position: 28
+ETag: "36982f73df7796f52d87ec5b85e1ce18-6"
+x-amz-meta-some-meta-data-key: CHANGED! <=====
+```
+
+Notice how the meta-data has actually changed but the size has not.
+
+Caveat: you cannot use versioning with appendable objects.
+
+Note that the appended data can be of completely unrelated types with the
+mime-type and position and size (which can also be computed), stored as metadata.
+Individual pieces can then just be easily retrieved using the "Range=bytes=..."
+request header.
+
 ## Web request logger and proxy
 
 The repository includes `etc/log-web-requests.py` which implements a minimal
@@ -265,7 +396,7 @@ a client and responsed received from the server.
 
 ## Status
 
-Under development. Version 0.4.
+Under development. Version 0.5.
 
 Notifications have not been properly tested.
 

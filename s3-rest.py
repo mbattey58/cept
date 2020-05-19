@@ -4,7 +4,7 @@
 
    __author__     = "Ugo Varetto"
    __license__    = "MIT"
-   __version__    = "0.4"
+   __version__    = "0.5"
    __maintainer__ = "Ugo Varetto"
    __email__      = "ugovaretto@gmail.com"
    __status__     = "Development"
@@ -52,9 +52,9 @@
 
     response content and headers can be searched:
         headers:
-            --search-header="<header key1>:<value1>;<header key 2>:<value2>..."
-        xml content:
-            --search-xml="aws:TAGNAME"
+            -H / --search-header= "<header key1>:<value1>;<header key 2>:..."
+        xml content through XPath query:
+            -X / --search-xml=".//aws:TAGNAME"
             "aws:" indentifies the AWS XML namespace and shall always be
             specified when searching for standard reponse tags such as
             '<UploadId>'
@@ -121,12 +121,13 @@ if __name__ == "__main__":
                              'header using actual endpoint', required=False)
     parser.add_argument('-X', '--xml-query', type=str,
                         dest='xml_query',
-                        help="search tag value in xml response",
-                        required=False)
+                        help='search tag value in xml response with XPath ' +
+                             'expressions, e.g: ".//aws:UploadId" ' +
+                             '"aws" represents the aws namespace and must ' +
+                             'always be added', required=False)
     parser.add_argument('-H', '--search-headers-keys', type=str,
                         dest='header_keys',
-                        help="search header key in response header, prefix" +
-                              " tags with 'aws:'",
+                        help="search header key in response header",
                         required=False)
     parser.add_argument('-l', '--log-level', type=str, required=False,
                         help='log level passed to log module: ERROR | WARN ' +
@@ -145,6 +146,8 @@ if __name__ == "__main__":
 
     params = None
     if args.parameters:
+        pairs = [x for x in args.parameters.split(";")]
+        
         params = dict([x.split("=", 1) for x in args.parameters.split(";")])
     headers = None
     if args.headers:

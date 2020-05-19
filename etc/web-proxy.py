@@ -111,13 +111,19 @@ class ProxyRequestHandler(BaseHTTPRequestHandler):
     def _send_response(self, resp):
         msg = self._print_response(resp)
         self.send_response(resp.status_code)
+        self._send_headers(resp.headers)
         self.end_headers()
         count = 0
         size = 0
         for i in resp.iter_content(chunk_size=self.chunk_size):
-            self.wfile.write(i)
+            p = bytearray(f"{len(i):x}\r\n".encode('utf-8'))
+            p.extend(i)
+            p.extend("\r\n".encode())
+            self.wfile.write(p)
             count += 1
             size = max(size, len(i))
+        self.wfile.write(f"{0:x}\r\n\r\n".encode())
+        self.wfile.write("\r\n".encode())
         msg += f"\nNumber of chunks: {count}, max chunk size: {size} bytes\n\n"
         self._log(msg)
 
@@ -200,7 +206,7 @@ class ProxyRequestHandler(BaseHTTPRequestHandler):
         if len(content) < _MAX_LOG_CONTENT_LENGTH:
             log_msg = "------REQUEST_BODY" + "\n" + \
                       f"{str(content)}"
-        self._log(log_msg)
+            self._log(log_msg)
         if "application/json" in [v.lower() for v in self.headers.values()]:
             ret = self._handle_rest_request(content)
             self.send_response(code=200)
