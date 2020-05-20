@@ -395,7 +395,7 @@ webserver which logs received web requests through a configurable logger,
 `logging` module being the default, and answers with configurable responses,
 default is a copy of the received request.
 The web request logger also works as a proxy logging requests received from
-a client and responsed received from the server.
+a client and responses received from the server.
 
 ## Status
 

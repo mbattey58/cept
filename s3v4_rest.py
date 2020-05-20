@@ -111,6 +111,17 @@ _XML_NAMESPACE_PREFIX = "{http://s3.amazonaws.com/doc/2006-03-01/}"
 UNSIGNED_PAYLOAD = "UNSIGNED-PAYLOAD"  # identify payloads with no hash
 
 
+def encode_url(params: Dict):
+    """Forward to urlencode, since we are alrady importing urlib.parse here
+       do not require client code to re-import it.
+
+    Args:
+        params (Dict): dictionary containing list of key, value pairs
+    Returns:
+        str: URL-encoded text
+    """
+    return urlencode(params)
+
 def build_multipart_list(parts: List[Tuple[int, str]]) -> str:
     """Return XML multipart message with list of part numbers & ETags
 
