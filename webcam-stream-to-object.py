@@ -4,9 +4,10 @@
 
   __author__     = "Ugo Varetto"
 
-  Create appendable object the append individual uncompresses frames.
-  Issue byte range request to extract individual frame.
+  Create an appendable object then append individual uncompressed frames.
+  Issue byte range request to extract an individual frame.
 
+  0) install OpenCV if not already installed
   1) ./s3-rest -c credentials.json -b opencv -m put -k output1.avi
      -t"append=;position=0"
      -p ./output.avi -f -t"append=;position=0"
@@ -28,9 +29,11 @@
 
     > x-amz-meta-frame-format: 640x480 8 bit RGB
 
- Note that it is possible to also store compressed video, but it
- requires a more complex setup with in-memory named pipes to which
- OpenCV writes data and from which data is read and streamed to Ceph."""
+ This code only shows how to create and use Ceph appendable objects and
+ add metadata, in order to keep things simple no compression is applied
+ to the stored frames, actual applications needing to perform real-time
+ comressed video streaming would required a much more complex setup,
+ involving queues/pipes/caches and asynchronous processing."""
 
 import s3v4_rest as s3
 import requests
@@ -46,10 +49,11 @@ if __name__ == "__main__":
 
     bucket_name = "opencv"
     key_name = "output1.avi"
-    pos = 0
-    N = 100
+    pos = 0  # location where to append data in object, must be == object size
+    N = 100  # number of frames to store
     start = time.perf_counter()
     cap = cv2.VideoCapture(0)
+    # append data, assuming bucket and appendable object are already created
     while(cap.isOpened() and N > 0):
         ret, frame = cap.read()
         frame_bytes = frame.tobytes()
@@ -62,9 +66,14 @@ if __name__ == "__main__":
             payload_length=frame_size,
             uri_path=f"/{bucket_name}/{key_name}",
         )
-        r = requests.put(request_url, data=frame_bytes, headers=headers)
-        pos += frame_size
-        N -= 1
+    r = requests.put(request_url, data=frame_bytes, headers=headers)
+
+    # HTTP response status code 200 --> no error
+    if r.status_code != 200:
+        print("Error: ")
+
+    pos += frame_size  # increase pointer to next position
+    N -= 1
     end = time.perf_counter()
     print("Elapsed time (s): " + str(end - start))
     print("Frame size (bytes): " + str(frame_size))
