@@ -7,6 +7,7 @@
    * request parameters and content information
 
    __author__     = "Ugo Varetto"
+   __credits__    = ["Ugo Varetto", "Luca Cervigni"]
    __license__    = "MIT"
    __version__    = "0.5"
    __maintainer__ = "Ugo Varetto"
@@ -121,6 +122,7 @@ def encode_url(params: Dict):
         str: URL-encoded text
     """
     return urlencode(params)
+
 
 def build_multipart_list(parts: List[Tuple[int, str]]) -> str:
     """Return XML multipart message with list of part numbers & ETags
@@ -276,7 +278,7 @@ def build_request_url(config: Union[S3Config, str] = None,
 
     payload_hash = payload_hash or UNSIGNED_PAYLOAD  # in case its None
     protocol = conf['protocol']
-    port = conf['port']
+    port = conf['port'] if 'port' in conf.keys() else None
     host = conf['host']
     access_key = conf['access_key']
     secret_key = conf['secret_key']
@@ -509,8 +511,8 @@ def send_s3_request(config: Union[S3Config, str] = None,
                          key without bucket not supported")
 
     uri_path = "/" + \
-               (f"{bucket_name}/" if bucket_name else "") + \
-               (f"{key_name}" if key_name else "")
+               (f"{bucket_name}" if bucket_name else "") + \
+               (f"/{key_name}" if key_name else "")
 
     if payload and payload_is_file_name:
         content_length = 0  # will be created by requests when uploading file
@@ -519,7 +521,7 @@ def send_s3_request(config: Union[S3Config, str] = None,
     # are urlencoded and passed in body automatically by requests and therefore
     # request is built with empty body and empty uri
     req_parameters = parameters
-    request_url, headers = build_request_url(
+    _ , headers = build_request_url(
         config=config,
         req_method=req_method,
         parameters=req_parameters,
@@ -530,11 +532,21 @@ def send_s3_request(config: Union[S3Config, str] = None,
         proxy_endpoint=proxy_endpoint
     )
 
+    request_url = f"{config['protocol']}://{config['host']}"
+    if 'port' in config.keys():
+        request_url += ":" + str(config['port'])
+    request_url += "/"
+    if bucket_name:
+        request_url += bucket_name
+        if key_name:
+            request_url += "/" + key_name
+    print(request_url)
     response = None
     if payload and payload_is_file_name:
         response = _REQUESTS_METHODS[req_method.lower()](
             request_url,
             data=open(payload, 'rb'),
+            params=parameters,
             headers=headers,
             stream=True)
         if logging.getLogger().level == logging.DEBUG:
@@ -545,6 +557,7 @@ def send_s3_request(config: Union[S3Config, str] = None,
             data = parameters
         response = _REQUESTS_METHODS[req_method.lower()](url=request_url,
                                                          data=data,
+                                                         params=parameters,
                                                          headers=headers,
                                                          stream=True)
         if logging.getLogger().level == logging.DEBUG:

@@ -48,7 +48,7 @@ if __name__ == "__main__":
         parameters=None,  #{"topic": "create_object", "events": "OBJECT_CREATE"},
         payload_hash=s3.hash(payload),  #s3.UNSIGNED_PAYLOAD,
         payload_length=0,  # will be added by requests.post
-        uri_path=f"/{bucket_name}")
+        uri_path=f"/")
         # additional_headers={"Content-Type":
         #                     "application/x-www-form-urlencoded"})
 

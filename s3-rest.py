@@ -3,6 +3,7 @@
    curl + S3v4 signing
 
    __author__     = "Ugo Varetto"
+   __credits__    = ["Ugo Varetto", "Luca Cervigni"]
    __license__    = "MIT"
    __version__    = "0.5"
    __maintainer__ = "Ugo Varetto"
@@ -146,9 +147,8 @@ if __name__ == "__main__":
 
     params = None
     if args.parameters:
-        pairs = [x for x in args.parameters.split(";")]
-        
         params = dict([x.split("=", 1) for x in args.parameters.split(";")])
+
     headers = None
     if args.headers:
         headers = dict([x.split(":", 1) for x in args.headers.split(";")])
