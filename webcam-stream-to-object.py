@@ -8,7 +8,8 @@
   Issue byte range request to extract an individual frame.
 
   0) install OpenCV if not already installed
-  1) ./s3-rest -c credentials.json -b opencv -m put -k output1.avi
+  1) create appendable object:
+     ./s3-rest -c credentials.json -b opencv -m put -k output1.avi
      -t"append=;position=0"
      -p ./output.avi -f -t"append=;position=0"
   2) run code, it will stop after 100 frames
@@ -19,7 +20,7 @@
          -e"Range:bytes=$start-$end" -n frame25.rgb
   4) convert to png:
      :> convert -size 640x480 -depth 8 RGB:frame25.rgb out.png
-  5) Add meta data with information on frame format:
+  5) Add meta-data with information on frame format:
      ./s3-rest -c credentials.json -b opencv -k output1.avi -m put \
      -p "" -t"append=;position=92160000" \
      -e"x-amz-meta-frame-format:640x480 8 bit RGB"
@@ -33,7 +34,10 @@
  add metadata, in order to keep things simple no compression is applied
  to the stored frames, actual applications needing to perform real-time
  comressed video streaming would required a much more complex setup,
- involving queues/pipes/caches and asynchronous processing."""
+ involving queues/pipes/caches and asynchronous processing.
+ Also, there is not need to use an external tool to send the various
+ REST requests listed above, but it makes it easier to isolate the code that only
+ deals with the video capture and streaming part."""
 
 import s3v4_rest as s3
 import requests
