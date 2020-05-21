@@ -178,17 +178,22 @@ if __name__ == "__main__":
         config.update(oc)
 
     response = s3.send_s3_request(
-                           config=config,
-                           req_method=args.method,
-                           parameters=params,
-                           payload=payload,
-                           sign_payload=args.sign_payload,
-                           payload_is_file_name=payload_is_file,
-                           bucket_name=args.bucket,
-                           key_name=args.key,
-                           additional_headers=headers,
-                           content_file=args.content_file,
-                           proxy_endpoint=args.proxy)
+        config=config,
+        req_method=args.method,
+        parameters=params,
+        payload=payload,
+        sign_payload=args.sign_payload,
+        payload_is_file_name=payload_is_file,
+        bucket_name=args.bucket,
+        key_name=args.key,
+        additional_headers=headers,
+        content_file=args.content_file,
+        proxy_endpoint=args.proxy)
+
+    content_type = None
+    for k in response.headers.keys():
+        if k.lower() == "content-type":
+            content_type = response.headers[k]
 
     if args.log_level.upper() == "RAW":
         print("STATUS CODE: " + str(response.status_code) + "\n")
@@ -197,20 +202,22 @@ if __name__ == "__main__":
         if response.content:
             msg = "RESPONSE CONTENT\n" + 20 * "=" + '\n'
             if "Content-Type" in response.headers.keys():
-                if (response.headers["Content-type"] == "application/json" or
-                        response.headers["Content-type"] == "text/plain"):
+                if (content_type == "application/json" or
+                        content_type == "text/plain"):
                     msg += response.content.decode('utf-8')
-                elif (response.headers["Content-type"] == "text/html" or
-                        response.headers["Content-type"] == "application/xml"):
+                elif (content_type == "text/html" or
+                        content_type == "application/xml" or
+                        content_type == "text/xml"):
                     dom = xml.dom.minidom.parseString(
-                            response.content.decode('utf-8'))
+                        response.content.decode('utf-8'))
                     pretty = dom.toprettyxml(indent="   ")
                     msg += pretty
             else:
                 msg += response.content[:1024].decode('utf-8')
             print(msg)
 
-    if args.xml_query and response.text:
+    if args.xml_query and response.text and \
+            (content_type in ("application/xml", "text/xml")):
         ns = {"aws": "http://s3.amazonaws.com/doc/2006-03-01/"}
         root = ET.fromstring(response.content)
         n = root.findall(args.xml_query, ns)
@@ -219,7 +226,7 @@ if __name__ == "__main__":
 
     if args.header_keys and response.headers:
         keys = args.header_keys.split(",") if "," in args.header_keys \
-                                           else args.header_keys
+            else args.header_keys
         if keys and type(keys) == str and keys in response.headers.keys():
             print(f"{keys}: {response.headers[keys]}")
         else:
