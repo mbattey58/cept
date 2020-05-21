@@ -311,7 +311,7 @@ x-rgw-next-append-position: 19
 The next append position is simply the object size.
 Note that `\n` are intepreted as two characters.
 
-After another few additions, if you `stat` the objec it will look like:
+After another few additions, if you `stat` the object it will look like:
 
 ```shell
 ./s3-rest.py -c config/s3-credentials2.json -b append-bucket -k object-5 -m head
@@ -378,7 +378,7 @@ x-amz-meta-some-meta-data-key: CHANGED! <=====
 
 Notice how the meta-data has actually changed but the size has not.
 
-Caveat: you cannot use versioning with appendable objects.
+**Caveat**: you cannot use versioning with appendable objects.
 
 Note that the appended data can be of completely unrelated types with the
 mime-type and position and size (which can also be computed), stored as metadata.
