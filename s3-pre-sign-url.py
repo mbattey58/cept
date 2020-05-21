@@ -44,6 +44,71 @@ def create_signature_key(key, date_stamp, region, service):
     return signing_key
 
 
+def pre_sign_url(method, region, bucket_name, key_name,
+                 endpoint, expiration, params):
+
+    # canonical request
+    time = datetime.datetime.utcnow()
+    time_stamp = time.strftime('%Y%m%dT%H%M%SZ')
+    date_stamp = time.strftime('%Y%m%d')
+
+    credentials = access_key + '/' + date_stamp + '/' + region + \
+        '/s3/aws4_request'
+
+    parameters = {'X-Amz-Algorithm': 'AWS4-HMAC-SHA256',
+                  'X-Amz-Credential': credentials,
+                  'X-Amz-Date': time_stamp,
+                  'X-Amz-Expires': str(expiration),
+                  'X-Amz-SignedHeaders': 'host'}
+    if params:
+        parameters.update(params)
+
+    canonical_query_string_url_encoded = urlencode(parameters)
+
+    canonical_resource = '/'
+    if bucket_name:
+        canonical_resource += bucket_name
+        if key_name:
+            canonical_resource += '/' + key_name
+    # canonical_resource_url_encoded = quote(canonical_resource)
+
+    payload_hash = 'UNSIGNED-PAYLOAD'
+    canonical_headers = 'host:' + host
+    signed_headers = 'host'
+
+    canonical_request = (method + '\n' +
+                         canonical_resource + '\n' +
+                         canonical_query_string_url_encoded + '\n' +
+                         canonical_headers + '\n' +
+                         '\n' +
+                         signed_headers + '\n' +
+                         payload_hash).encode('utf-8')
+
+    # text to sign
+    hashing_algorithm = 'AWS4-HMAC-SHA256'
+    credential_ctx = date_stamp + '/' + region + '/' + 's3' + '/' + \
+        'aws4_request'
+    string_to_sign = (hashing_algorithm + '\n' +
+                      time_stamp + '\n' +
+                      credential_ctx + '\n' +
+                      hashlib.sha256(canonical_request).hexdigest())
+
+    # generate the signature
+    signature_key = create_signature_key(secret_key, date_stamp, region, 's3')
+    signature = hmac.new(signature_key, string_to_sign.encode('utf-8'),
+                         hashlib.sha256).hexdigest()
+
+    request_url = (endpoint +
+                   (('/' + bucket_name) if bucket_name else "") +
+                   (('/' + key_name) if key_name else "") +
+                   '?' +
+                   canonical_query_string_url_encoded +
+                   '&X-Amz-Signature=' +
+                   signature)
+
+    return request_url
+
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(
         description='Generate pre-singed URL for distribution')
@@ -91,65 +156,9 @@ if __name__ == "__main__":
     if args.params:
         params = dict(x.split('=') for x in args.params.split(';'))
 
-    # canonical request
-    time = datetime.datetime.utcnow()
-    time_stamp = time.strftime('%Y%m%dT%H%M%SZ')
-    date_stamp = time.strftime('%Y%m%d')
+    signed_url = pre_sign_url(method, region, bucket_name, key_name,
+                              endpoint, expiration, params)
 
-    credentials = access_key + '/' + date_stamp + '/' + region + \
-        '/s3/aws4_request'
-
-    parameters = {'X-Amz-Algorithm': 'AWS4-HMAC-SHA256',
-                  'X-Amz-Credential': credentials,
-                  'X-Amz-Date': time_stamp,
-                  'X-Amz-Expires': str(expiration),
-                  'X-Amz-SignedHeaders': 'host'}
-    if params:
-        parameters.update(params)
-
-    canonical_query_string_url_encoded = urlencode(parameters)
-
-    canonical_resource = '/'
-    if bucket_name:
-        canonical_resource += bucket_name
-        if key_name:
-            canonical_resource += '/' + key_name
-    canonical_resource_url_encoded = quote(canonical_resource)
-
-    payload_hash = 'UNSIGNED-PAYLOAD'
-    canonical_headers = 'host:' + host
-    signed_headers = 'host'
-
-    canonical_request = (method + '\n' +
-                         canonical_resource + '\n' +
-                         canonical_query_string_url_encoded + '\n' +
-                         canonical_headers + '\n' +
-                         '\n' +
-                         signed_headers + '\n' +
-                         payload_hash).encode('utf-8')
-
-    # text to sign
-    hashing_algorithm = 'AWS4-HMAC-SHA256'
-    credential_ctx = date_stamp + '/' + region + '/' + 's3' + '/' + \
-        'aws4_request'
-    string_to_sign = (hashing_algorithm + '\n' +
-                      time_stamp + '\n' +
-                      credential_ctx + '\n' +
-                      hashlib.sha256(canonical_request).hexdigest())
-
-    # generate the signature
-    signature_key = create_signature_key(secret_key, date_stamp, region, 's3')
-    signature = hmac.new(signature_key, string_to_sign.encode('utf-8'),
-                         hashlib.sha256).hexdigest()
-
-    request_url = (endpoint +
-                   (('/' + bucket_name) if bucket_name else "") +
-                   (('/' + key_name) if key_name else "") +
-                   '?' +
-                   canonical_query_string_url_encoded +
-                   '&X-Amz-Signature=' +
-                   signature)
-
-    print("\n" + request_url + "\n")
+    print("\n" + signed_url + "\n")
     if args.print_params:
-        print(parameters)
+        print(params)
