@@ -132,23 +132,44 @@ class ProxyRequestHandler(BaseHTTPRequestHandler):
         return r.url
 
     def _send_response(self, resp):
-        msg = self._print_response(resp)
+        print("cccccccccccccccccccccccc")
+        msg = "\n" + str(resp.headers) + "\n"  # self._print_response(resp)
+        print(msg)
         self.send_response(resp.status_code)
         self._send_headers(resp.headers)
         self.end_headers()
         count = 0
         size = 0
         for i in resp.iter_content(chunk_size=self.chunk_size):
-            p = bytearray(f"{len(i):x}\r\n".encode('utf-8'))
-            p.extend(i)
-            p.extend("\r\n".encode())
-            self.wfile.write(p)
+            self.wfile.write(i)
             count += 1
             size = max(size, len(i))
-        self.wfile.write(f"{0:x}\r\n\r\n".encode())
-        self.wfile.write("\r\n".encode())
-        msg += f"\nNumber of chunks: {count}, max chunk size: {size} bytes\n\n"
+        msg += "\nnumber of chunks: " + str(count) + \
+               "\nmax chunk length: " + str(size)
         self._log(msg)
+
+        # encoding = None
+        # for k in resp.headers.keys():
+        #     if k.lower() == "transfer-encoding":
+        #         encoding = resp.headers[k]
+        # if encoding and encoding.lower().strip() == "chunked":
+        #     count = 0
+        #     size = 0
+        #     for i in resp.iter_content(chunk_size=self.chunk_size):
+        #         p = bytearray(f"{len(i):x}\r\n".encode('utf-8'))
+        #         p.extend(i)
+        #         p.extend("\r\n".encode())
+        #         self.wfile.write(p)
+        #         count += 1
+        #         size = max(size, len(i))
+        #     self.wfile.write(f"{0:x}\r\n\r\n".encode())
+        #     self.wfile.write("\r\n".encode())
+        #     msg += f"\nNumber of chunks: {count}, max chunk size: {size} "+ \
+        #            "bytes\n\n"
+        # else:
+        #     msg += str(resp.headers)
+        #     self.wfile.write(resp.content)
+        #     msg += "\ncontent length: " + str(len(resp.content))
 
     def _handle_rest_request(self, json_content):
         config = json.loads(json_content)

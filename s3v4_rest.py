@@ -614,11 +614,11 @@ def send_s3_request(config: Union[S3Config, str] = None,
     if response.content and not content_file:
         msg = "RESPONSE CONTENT\n" + 20 * "=" + '\n'
         if content_type:
-            if (content_type == "application/json" or
-                    content_type == "text/plain"):
+            if ("application/json" in content_type or
+                    "text/plain" in content_type):
                 msg += read_chunks()
-            elif (content_type == "text/html" or
-                    content_type == "application/xml"):
+            elif ("text/html" in content_type or
+                    "application/xml" in content_type):
                 dom = xml.dom.minidom.parseString(read_chunks())
                 pretty = dom.toprettyxml(indent="   ")
                 msg += pretty

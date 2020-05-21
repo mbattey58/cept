@@ -202,12 +202,12 @@ if __name__ == "__main__":
         if response.content:
             msg = "RESPONSE CONTENT\n" + 20 * "=" + '\n'
             if content_type:
-                if (content_type == "application/json" or
-                        content_type == "text/plain"):
+                if ("application/json" in content_type or
+                        "text/plain" in content_type):
                     msg += response.content.decode('utf-8')
-                elif (content_type == "text/html" or
-                        content_type == "application/xml" or
-                        content_type == "text/xml"):
+                elif ("text/html" in content_type or
+                        "application/xml" in content_type or
+                        "text/xml" in content_type):
                     dom = xml.dom.minidom.parseString(
                         response.content.decode('utf-8'))
                     pretty = dom.toprettyxml(indent="   ")
