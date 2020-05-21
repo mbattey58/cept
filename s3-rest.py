@@ -201,7 +201,7 @@ if __name__ == "__main__":
         print(response.headers)
         if response.content:
             msg = "RESPONSE CONTENT\n" + 20 * "=" + '\n'
-            if "Content-Type" in response.headers.keys():
+            if content_type:
                 if (content_type == "application/json" or
                         content_type == "text/plain"):
                     msg += response.content.decode('utf-8')

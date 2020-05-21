@@ -1,0 +1,29 @@
+{
+    "query": {
+      "bool": {
+        "must": [
+          {
+            "term": {
+              "bucket": "obo"
+            }
+          },
+          {
+            "bool": {
+              "must": [
+                {
+                  "match": {
+                    "permissions": "2bf7e287aba345c1a3d0a8e177aeccd6$2bf7e287aba345c1a3d0a8e177aeccd6"
+                  }
+                },
+                {
+                  "term": {
+                    "name": "file001"
+                  }
+                }
+              ]
+            }
+          }
+        ]
+      }
+    }
+  }

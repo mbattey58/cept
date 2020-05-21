@@ -303,11 +303,6 @@ def build_request_url(config: Union[S3Config, str] = None,
     default_headers = {'Host': host + ":" + str(port),
                        'X-Amz-Content-SHA256': payload_hash,
                        'X-Amz-Date': amzdate}
-    if additional_headers:
-        ctk = [c for c in additional_headers.keys()
-               if c.lower().strip() == "content-type"]
-        if ctk:
-            default_headers.update({ctk, additional_headers[ctk]})
 
     x_amz_headers = {}
     if additional_headers:
@@ -521,7 +516,7 @@ def send_s3_request(config: Union[S3Config, str] = None,
     # are urlencoded and passed in body automatically by requests and therefore
     # request is built with empty body and empty uri
     req_parameters = parameters
-    _ , headers = build_request_url(
+    _, headers = build_request_url(
         config=config,
         req_method=req_method,
         parameters=req_parameters,
@@ -532,15 +527,19 @@ def send_s3_request(config: Union[S3Config, str] = None,
         proxy_endpoint=proxy_endpoint
     )
 
-    request_url = f"{config['protocol']}://{config['host']}"
-    if 'port' in config.keys():
-        request_url += ":" + str(config['port'])
+    request_url = None
+    if proxy_endpoint:
+        request_url = proxy_endpoint
+    else:
+        request_url = f"{config['protocol']}://{config['host']}"
+        if 'port' in config.keys():
+            request_url += ":" + str(config['port'])
     request_url += "/"
     if bucket_name:
         request_url += bucket_name
         if key_name:
             request_url += "/" + key_name
-    print(request_url)
+
     response = None
     if payload and payload_is_file_name:
         response = _REQUESTS_METHODS[req_method.lower()](
@@ -566,10 +565,21 @@ def send_s3_request(config: Union[S3Config, str] = None,
     def ok(code):
         return 200 <= code < 300
 
+    def transfer_chunked(headers):
+        for k in headers.keys():
+            if k.lower() == "transfer-encoding":
+                return headers[k].lower() == "chunked"
+        return False
+
+    chunked = transfer_chunked(response.headers)
+
     if content_file and ok(response.status_code) and response.content:
         with open(content_file, "wb") as of:
-            for i in response.iter_content(chunk_size=chunk_size):
-                of.write(i)
+            if chunked:
+                for i in response.iter_content(chunk_size=chunk_size):
+                    of.write(i)
+            else:
+                of.write(response.content)
 
     logfun = logging.info if ok(response.status_code) else logging.error
 
@@ -589,19 +599,26 @@ def send_s3_request(config: Union[S3Config, str] = None,
     def read_chunks():
         nonlocal response
         text = ""
-        for i in response.iter_content(chunk_size=chunk_size):
-            text += i.decode('utf-8')
+        if chunked:
+            for i in response.iter_content(chunk_size=chunk_size):
+                text += i.decode('utf-8')
+        else:
+            text = response.content.decode('utf-8')
         return text
+
+    content_type = None
+    for k in response.headers.keys():
+        if k.lower() == "content-type":
+            content_type = response.headers[k]
 
     if response.content and not content_file:
         msg = "RESPONSE CONTENT\n" + 20 * "=" + '\n'
-        if "Content-Type" in response.headers.keys():
-            if (response.headers["Content-type"] == "application/json" or
-                    response.headers["Content-type"] == "text/plain"):
+        if content_type:
+            if (content_type == "application/json" or
+                    content_type == "text/plain"):
                 msg += read_chunks()
-                print("<<<<<<<< " + msg[4:])
-            elif (response.headers["Content-type"] == "text/html" or
-                    response.headers["Content-type"] == "application/xml"):
+            elif (content_type == "text/html" or
+                    content_type == "application/xml"):
                 dom = xml.dom.minidom.parseString(read_chunks())
                 pretty = dom.toprettyxml(indent="   ")
                 msg += pretty

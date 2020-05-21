@@ -9,6 +9,7 @@ from urllib.parse import parse_qs
 from urllib.parse import urlparse
 import json
 import re
+import argparse
 
 """Minimal proxy http server, uses 'logging' module, forwards requests to
    remote endpoint.
@@ -32,6 +33,7 @@ import re
 _REMOTE_URL: str = ""
 _DOWNLOAD_CHUNK_SIZE: int = 1 << 20
 _MAX_LOG_CONTENT_LENGTH: int = 1 << 10
+_FILTER_CONTENT = False
 
 # NOTE: NOT IMPLEMENTED YET
 # _AWS_V4_SIGNING = False
@@ -40,6 +42,13 @@ _MAX_LOG_CONTENT_LENGTH: int = 1 << 10
 # _REQUEST_TIMEOUT = 5
 # _VERIFY_SSL = True
 # _MAX_RETRIES = 1
+
+
+def filter_content(content: bytes, headers: dict):
+    global _FILTER_CONTENT
+    if not _FILTER_CONTENT:
+        return content
+    return filter_module.filter_content(content, headers)
 
 
 class ProxyRequestHandler(BaseHTTPRequestHandler):
@@ -83,14 +92,28 @@ class ProxyRequestHandler(BaseHTTPRequestHandler):
                str(resp.headers) + "\n" + \
                "------CONTENT\n" + resp.text
 
-    def _send_default_response(self, method=None):
+    def _send_default_response(self, content=None, method=None):
         # method not currently used
-        self.send_response(200)
-        self.send_header('Content-type', 'text/plain')
-        self.end_headers()
-        self.wfile.write(("Request line: " + self.requestline + '\n' +
-                         "Request Headers" + str(self.headers) + '\n')
-                         .encode())
+        if not content:
+            self.send_response(200)
+            self.send_header('Content-type', 'text/plain')
+            self.end_headers()
+            self.wfile.write(("Request line: " + self.requestline + '\n' +
+                              "Request Headers" + str(self.headers) + '\n')
+                             .encode())
+        else:
+            self.send_response(200)
+            content_length_sent = False
+            for k, v in self.headers.items():
+                if k.lower() == "content-length":
+                    self.send_header(k, len(content))
+                    content_length_sent = True
+                else:
+                    self.send_header(k, v)
+            if not content_length_sent:
+                self.send_header("Content-Length", len(content))
+            self.end_headers()
+            self.wfile.write(content)
 
     def _inject_auth(self, headers):
         return headers
@@ -189,14 +212,16 @@ class ProxyRequestHandler(BaseHTTPRequestHandler):
         if len(content) < _MAX_LOG_CONTENT_LENGTH:
             log_msg = "------REQUEST_BODY" + "\n" + \
                       f"{str(content)}"
-        self._log(log_msg)
+            self._log(log_msg)
         if self.remote_url:
             req_headers = self._parse_headers()
-            resp = requests.put(self._url(), data=content, headers=req_headers,
-                                stream=True)
+            resp = requests.post(self._url(),
+                                 data=filter_content(content, self.headers),
+                                 headers=req_headers,
+                                 stream=True)
             self._send_response(resp)
         else:
-            self._send_default_response()
+            self._send_default_response(filter_content(content, self.headers))
 
     def do_PUT(self):
         self._log(self._print_reqline_and_headers())
@@ -207,20 +232,15 @@ class ProxyRequestHandler(BaseHTTPRequestHandler):
             log_msg = "------REQUEST_BODY" + "\n" + \
                       f"{str(content)}"
             self._log(log_msg)
-        if "application/json" in [v.lower() for v in self.headers.values()]:
-            ret = self._handle_rest_request(content)
-            self.send_response(code=200)
-            self.send_header("Content-Type", "application/json")
-            self.end_headers()
-            self.wfile.write(ret.encode('utf-8'))
-            return
         if self.remote_url:
             req_headers = self._parse_headers()
-            resp = requests.put(self._url(), data=content, headers=req_headers,
+            resp = requests.put(self._url(),
+                                data=filter_content(content, self.headers),
+                                headers=req_headers,
                                 stream=True)
             self._send_response(resp)
         else:
-            self._send_default_response()
+            self._send_default_response(filter_content(content, self.headers))
 
     def do_DELETE(self):
         self._log(self._print_reqline_and_headers())
@@ -234,16 +254,28 @@ class ProxyRequestHandler(BaseHTTPRequestHandler):
 
 
 if __name__ == "__main__":
-    if len(sys.argv) < 2:
-        print(f'usage: {sys.argv[0]} <port> <remote url>', file=sys.stderr)
-        sys.exit(-1)
-    if len(sys.argv) == 3:
-        # global _REMOTE_URL "annotated name can't be global" issue
-        _REMOTE_URL = sys.argv[2]
-    port = int(sys.argv[1])
-    server_address = ('', port)
-    handler_class = ProxyRequestHandler
-    httpd = HTTPServer(server_address, handler_class)
+    parser = argparse.ArgumentParser(
+        description='web proxy and request logger, works as both an ' +
+                    'echo server for web requests and actual proxy with ' +
+                    'the capability to load custom filters to filter and ' +
+                    'modify content')
+    parser.add_argument('-p', '--port', dest='port', type=int,
+                        required=True, help='tcp port')
+    parser.add_argument('-e', '--endpoint', dest='endpoint', type=str,
+                        required=False, help='address to forward requests to')
+    parser.add_argument('-f', '--content-filter', dest='filter', type=str,
+                        required=False,
+                        help="python module implementing " +
+                             "filter_content(content: bytes, headers: dict)" +
+                             "-> bytes function applied to content")
+    args = parser.parse_args()
+    if args.endpoint:
+        _REMOTE_URL = args.endpoint
+    if args.filter:
+        exec(f"import {args.filter} as filter_module")
+        _FILTER_CONTENT = True
+    port = args.port
+    httpd = HTTPServer(('', port), ProxyRequestHandler)
     print(f"Starting http server on port {port}" +
           (f", forwarding requests to {_REMOTE_URL}" if _REMOTE_URL else ""))
     logging.basicConfig(level=logging.INFO)
@@ -254,3 +286,12 @@ if __name__ == "__main__":
         sys.exit(0)
     except Exception as e:
         print("Error: " + e, file=sys.stderr)
+
+# TODO: currently no way to add a control path
+# if "application/json" in [v.lower() for v in self.headers.values()]:
+#     ret = self._handle_rest_request(content)
+#     self.send_response(code=200)
+#     self.send_header("Content-Type", "application/json")
+#     self.end_headers()
+#     self.wfile.write(ret.encode('utf-8'))
+#     return
