@@ -34,6 +34,7 @@ _REMOTE_URL: str = ""
 _DOWNLOAD_CHUNK_SIZE: int = 1 << 20
 _MAX_LOG_CONTENT_LENGTH: int = 1 << 10
 _FILTER_CONTENT = False
+_MUTE = False
 
 # NOTE: NOT IMPLEMENTED YET
 # _AWS_V4_SIGNING = False
@@ -67,6 +68,9 @@ class ProxyRequestHandler(BaseHTTPRequestHandler):
         ProxyRequestHandler.log_function(s)
 
     def _log(self, msg):
+        global _MUTE
+        if _MUTE:
+            return
         self.log_message(msg)
 
     def _print_text_header(self):
@@ -132,9 +136,9 @@ class ProxyRequestHandler(BaseHTTPRequestHandler):
         return r.url
 
     def _send_response(self, resp):
-        print("cccccccccccccccccccccccc")
         msg = "\n" + str(resp.headers) + "\n"  # self._print_response(resp)
-        print(msg)
+        self._log("RESPONSE HEADERS\n" + 20*"=" + "\n" + msg)
+        msg = ""
         self.send_response(resp.status_code)
         self._send_headers(resp.headers)
         self.end_headers()
