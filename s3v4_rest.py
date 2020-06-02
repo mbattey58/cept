@@ -300,7 +300,7 @@ def build_request_url(config: Union[S3Config, str] = None,
     # Date w/o time, used in credential scope
     datestamp = dt.strftime('%Y%m%d')
 
-    default_headers = {'Host': host + ":" + str(port),
+    default_headers = {'Host': host + (f":{port}" if port else ''),
                        'X-Amz-Content-SHA256': payload_hash,
                        'X-Amz-Date': amzdate}
 
