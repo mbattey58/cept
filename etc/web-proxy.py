@@ -103,7 +103,7 @@ class ProxyRequestHandler(BaseHTTPRequestHandler):
             self.send_header('Content-type', 'text/plain')
             self.end_headers()
             self.wfile.write(("Request line: " + self.requestline + '\n' +
-                              "Request Headers" + str(self.headers) + '\n')
+                              "\nRequest Headers:\n" + str(self.headers) + '\n')
                              .encode())
         else:
             self.send_response(200)
